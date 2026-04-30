@@ -29,19 +29,19 @@ class Instance:
         interventions: liens en panne par timestep {t: [link_ids]}
     """
 
-    name: str = ""
-    dataset: str = ""
-    id: str = ""
+    name: str
+    dataset: str
+    id: str
 
-    demands: list[Demand] = []
+    demands: list[Demand]
 
-    base_graph: nx.DiGraph = nx.DiGraph()
+    base_graph: nx.DiGraph
 
-    traffics: list[Traffic] = []
-    num_time_slots: int = 0
-    max_segments: int = 0
-    budgets: dict[int, int] = {}
-    interventions: dict[int, list[int]] = {}
+    traffics: list[Traffic]
+    num_time_slots: int
+    max_segments: int
+    budgets: dict[int, int]
+    interventions: dict[int, list[int]]
 
     def save(self):
 

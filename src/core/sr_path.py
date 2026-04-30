@@ -12,7 +12,9 @@ class SRPath:
     waypoints: list[int]
     time_slot: int
 
-    def __init__(self, demand: Demand, time_slot: int, waypoints: list[int]):
+    def __init__(
+        self, demand: Demand, time_slot: int, waypoints: list[int] | None = None
+    ):
         self.demand = demand
         self.time_slot = time_slot
         self.waypoints = waypoints if waypoints is not None else []
@@ -38,3 +40,13 @@ class SRPath:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def get_segments(
+        self, override_waypoints: list[int] | None = None
+    ) -> set[tuple[int, int]]:
+        if override_waypoints is None:
+            nodes = self.full_sequence
+        else:
+            nodes = [self.demand.source] + override_waypoints + [self.demand.target]
+
+        return set(zip(nodes[:-1], nodes[1:]))

@@ -1,0 +1,8 @@
+venv
+instances
+checker
+solutions
+best_solutions
+*.png
+*.log
+*.pyc

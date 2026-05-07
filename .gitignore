@@ -6,3 +6,9 @@ best_solutions
 *.png
 *.log
 *.pyc
+.vscode
+*.txt
+*.o
+CMakeFiles
+*.json
+*.cmake

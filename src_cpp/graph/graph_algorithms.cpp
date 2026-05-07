@@ -57,9 +57,7 @@ DijkstraResult Graph::compute_dijkstra(int source_node) const
                 pq.push({nouvelle_dist, v});
             }
             else if (nouvelle_dist == distances[v])
-            {
                 predecessors[v].push_back(all_edges_[link].id);
-            }
         }
     }
 

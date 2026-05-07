@@ -42,9 +42,7 @@ struct DijkstraResult
                 os << dr.predecessors[i][j];
 
                 if (j < dr.predecessors[i].size() - 1)
-                {
                     os << ", ";
-                }
             }
             os << "]\n";
         }

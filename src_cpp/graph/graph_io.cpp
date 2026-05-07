@@ -8,14 +8,13 @@
 
 using json = nlohmann::json;
 
-Graph::Graph(const std::string &json_path)
+Graph::Graph(const std::string &dataset, const std::string &instance_id)
 {
+    std::string json_path = "instances/" + dataset + "/" + dataset + "-" + instance_id + "-net.json";
     std::ifstream file(json_path);
 
     if (!file.is_open())
-    {
         throw std::runtime_error("Impossible d'ouvrir le fichier :" + json_path);
-    }
 
     json data = json::parse(file);
 
@@ -34,7 +33,5 @@ Graph::Graph(const std::string &json_path)
     const auto &links = data["links"];
 
     for (const auto &link : links)
-    {
         add_edge(link["from"].get<int>(), link["to"].get<int>(), link["metric"].get<double>(), link["capacity"].get<double>());
-    }
 }

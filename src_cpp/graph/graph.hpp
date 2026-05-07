@@ -11,7 +11,7 @@
 class Graph
 {
 public:
-    Graph(const std::string &json_path);
+    Graph(const std::string &dataset, const std::string &instance_id);
     Graph(int num_nodes);
 
     int add_edge(int from, int to, double weight, double capacity);
@@ -35,9 +35,7 @@ public:
     friend std::ostream &operator<<(std::ostream &os, const Graph &g)
     {
         for (Edge edge : g.all_edges_)
-        {
             os << edge << std::endl;
-        }
 
         return os;
     }
@@ -45,12 +43,9 @@ public:
     int get_edge_id(int u, int v) const
     {
         for (int edge_id : out_edges_[u])
-        {
             if (all_edges_[edge_id].to == v)
-            {
                 return edge_id;
-            }
-        }
+
         return -1;
     }
 

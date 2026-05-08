@@ -1,60 +1,84 @@
-// graph.hpp
-
+// graph/graph.hpp
+// clang-format off
 #pragma once
 
 #include <vector>
 #include <string>
-#include <iostream>
+#include <algorithm>
 #include "edge.hpp"
-#include "dijkstra_result.hpp"
+#include "shortest_path_tree.hpp"
+
+// remplacer edge par link ?
 
 class Graph
 {
 public:
-    Graph(const std::string &dataset, const std::string &instance_id);
-    Graph(int num_nodes);
+    static constexpr uint32_t INVALID_EDGE = 0xFFFFFFFF;
+    
+    Graph(uint16_t nodes_count) : node_count_(nodes_count), in_edges_(nodes_count), out_edges_(nodes_count), node_names_(nodes_count) {}
 
-    int add_edge(int from, int to, double weight, double capacity);
+    // io
+    static Graph from_json(const std::string &dataset, const std::string &instance_id);
+    void to_json(const std::string &dataset, const std::string &instance_id) const;
 
-    const std::vector<int> &get_in_edges_ids(int node_id) const;
-    const std::vector<int> &get_out_edges_ids(int node_id) const;
-
-    const Edge &get_edge(int edge_id) const;
-
-    int get_in_degree(int node_id) const;
-    int get_out_degree(int node_id) const;
-    int get_degree(int node_id) const;
-
-    double get_in_capacity(int node_id) const;
-    double get_out_capacity(int node_id) const;
-    double get_total_capacity() const;
-
-    int num_edges() const { return static_cast<int>(all_edges_.size()); }
-    int num_nodes() const { return static_cast<int>(in_edges_.size()); }
-
-    friend std::ostream &operator<<(std::ostream &os, const Graph &g)
+    uint16_t add_edge(uint16_t source_node, uint16_t target_node, double weight, double capacity)
     {
-        for (Edge edge : g.all_edges_)
-            os << edge << std::endl;
+        uint16_t id = static_cast<uint16_t>(all_edges_.size());
 
-        return os;
+        all_edges_.push_back({id, source_node, target_node, weight, capacity});
+
+        in_edges_[target_node].push_back(id);
+        out_edges_[source_node].push_back(id);
+
+        return id;
     }
 
-    int get_edge_id(int u, int v) const
+    uint32_t edge_id(uint16_t u, uint16_t v) const
     {
-        for (int edge_id : out_edges_[u])
-            if (all_edges_[edge_id].to == v)
-                return edge_id;
+        const auto& out = out_edges_[u];
 
-        return -1;
+        auto it = std::lower_bound(out.begin(), out.end(), v, 
+            [this](uint32_t edge_id, uint16_t target_to_find) {
+                return all_edges_[edge_id].target_node < target_to_find;
+            }
+        );
+
+        if (it != out.end() && all_edges_[*it].target_node == v)
+            return *it;
+
+        return INVALID_EDGE;
     }
 
-    double get_capacity_ratio(int node_id) const;
+    const Edge &edge(uint16_t edge_id) const { return all_edges_[edge_id]; }
 
-    DijkstraResult compute_dijkstra(int source_node) const;
+    const std::vector<uint16_t> &incoming_edges_ids(uint16_t node_id) const { return in_edges_[node_id]; } 
+    const std::vector<uint16_t> &outgoing_ids(uint16_t node_id) const { return out_edges_[node_id]; } 
+
+    const std::string& node_name(uint16_t id) const { return node_names_[id]; }
+
+    uint16_t in_degree(uint16_t node_id) const { return in_edges_[node_id].size(); }
+    uint16_t out_degree(uint16_t node_id) const { return out_edges_[node_id].size(); }
+    uint16_t degree(uint16_t node_id) const { return in_degree(node_id) + out_degree(node_id); }
+
+    double node_ingress_cap(uint16_t node_id) const;
+    double node_egress_cap(uint16_t node_id) const;
+
+    double node_pressure_index(uint16_t node_id) const;
+
+    double total_cap() const;
+
+    uint16_t edges_count() const { return static_cast<uint16_t>(all_edges_.size()); }
+    uint16_t nodes_count() const { return node_count_; }
+
+    ShortestPathTree shortest_path_tree(uint16_t source_node) const;
 
 private:
-    std::vector<std::vector<int>> in_edges_;
-    std::vector<std::vector<int>> out_edges_;
+    const uint16_t node_count_;
+
     std::vector<Edge> all_edges_;
+
+    std::vector<std::vector<uint16_t>> in_edges_;
+    std::vector<std::vector<uint16_t>> out_edges_;
+
+    std::vector<std::string> node_names_;
 };

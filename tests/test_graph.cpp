@@ -1,5 +1,5 @@
 // tests/test_graph.cpp
-
+// g++ -std=c++17 -Wall -Wextra tests/test_main.cpp tests/test_graph.cpp src_cpp/graph/graph.cpp src_cpp/graph/graph_io.cpp src_cpp/graph/shortest_path_tree.cpp -o run_tests
 #include "lib/doctest.h"
 
 #include "../src_cpp/graph/graph.hpp"
@@ -83,4 +83,60 @@ TEST_CASE("Dijkstra: ECMP - plusieurs prédécesseurs au même coût")
 
     CHECK(spt.distances[3] == doctest::Approx(2.0));
     CHECK(spt.get_predecessor_count(3) == 2); // ECMP : 2 chemins
+}
+
+TEST_CASE("dijkstra: invariants sur instance toy")
+{
+    Graph g = Graph::from_json("toy", "00");
+
+    SUBCASE("distance source→source = 0 pour toute source")
+    {
+        for (uint16_t s = 0; s < g.nodes_count(); ++s)
+        {
+            auto spt = g.shortest_path_tree(s);
+            CHECK(spt.distances[s] == doctest::Approx(0.0));
+        }
+    }
+
+    SUBCASE("inégalité triangulaire pour tout arc")
+    {
+        for (uint16_t s = 0; s < g.nodes_count(); ++s)
+        {
+            auto spt = g.shortest_path_tree(s);
+            for (uint32_t a = 0; a < g.edges_count(); ++a)
+            {
+                const Edge &e = g.edge(a);
+                if (spt.distances[e.source_node] < 1e18)
+                {
+                    CHECK(spt.distances[e.target_node] <= spt.distances[e.source_node] + e.weight + 1e-9);
+                }
+            }
+        }
+    }
+
+    SUBCASE("prédécesseurs ECMP cohérents avec distances")
+    {
+        for (uint16_t s = 0; s < g.nodes_count(); ++s)
+        {
+            auto spt = g.shortest_path_tree(s);
+            for (uint16_t v = 0; v < g.nodes_count(); ++v)
+            {
+                if (v == s)
+                    continue;
+                if (spt.distances[v] >= 1e18)
+                    continue;
+
+                uint32_t count = spt.get_predecessor_count(v);
+                CHECK(count > 0); // si v atteignable et != s, il a un prédécesseur
+
+                const uint16_t *preds = spt.get_predecessors_begin(v);
+                for (uint32_t i = 0; i < count; ++i)
+                {
+                    const Edge &e = g.edge(preds[i]);
+                    CHECK(e.target_node == v);
+                    CHECK(spt.distances[e.source_node] + e.weight == doctest::Approx(spt.distances[v]));
+                }
+            }
+        }
+    }
 }

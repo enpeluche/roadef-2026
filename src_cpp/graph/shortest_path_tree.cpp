@@ -1,8 +1,47 @@
+// graph/shortest_path_tree.cpp
+
 #include "shortest_path_tree.hpp"
 #include "graph.hpp"
 
 // des vecteurs de travail en paramètre ?
+#include <iostream>
+#include <iomanip> // pour std::setw
 
+std::ostream &operator<<(std::ostream &os, const ShortestPathTree &spt)
+{
+    os << "========== SHORTEST PATH TREE ==========\n";
+    os << " Source Node : " << spt.source_node << "\n";
+    os << " Nodes found : " << spt.distances.size() << "\n";
+
+    os << "\n First 5 destinations (Sample):\n";
+    os << "  Dest | Distance | Predecessor Edges (IDs)\n";
+    os << "  -----------------------------------------\n";
+
+    // On affiche les 5 premiers nœuds (différents de la source)
+    uint16_t displayed = 0;
+    for (uint16_t i = 0; i < spt.distances.size(); ++i)
+    {
+        if (i == spt.source_node)
+            continue; // On saute la source elle-même
+
+        os << "  " << std::setw(4) << i << " | "
+           << std::setw(8) << spt.distances[i] << " | [";
+
+        // Récupération des prédécesseurs via tes méthodes inline
+        const uint16_t *begin = spt.get_predecessors_begin(i);
+        const uint16_t *end = spt.get_predecessors_end(i);
+
+        for (const uint16_t *it = begin; it != end; ++it)
+        {
+            os << *it << (it + 1 == end ? "" : ", ");
+        }
+
+        os << "]\n";
+        displayed++;
+    }
+    os << "========================================\n";
+    return os;
+}
 ShortestPathTree Graph::shortest_path_tree(uint16_t source_node) const
 {
     const uint16_t n = nodes_count();

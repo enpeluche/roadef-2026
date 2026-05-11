@@ -4,6 +4,7 @@
 
 #include "graph.hpp"
 #include <nlohmann/json.hpp>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <queue>
@@ -21,6 +22,7 @@ Graph Graph::from_json(const std::string &dataset, const std::string &instance_i
 {
     // Lecture du fichier
     std::string json_path = "instances/" + dataset + "/" + dataset + "-" + instance_id + "-net.json";
+
     std::ifstream file(json_path);
 
     if (!file.is_open())
@@ -79,7 +81,10 @@ void Graph::to_json(const std::string &dataset, const std::string &instance_id) 
 {
     std::string json_path = "instances/" + dataset + "/" + dataset + "-" + instance_id + "-net.json";
 
-    nlohmann::json j;
+    std::filesystem::path path(json_path);
+    std::filesystem::create_directories(path.parent_path());
+
+    nlohmann::ordered_json j;
 
     // informations toujours vraies
     j["directed"] = true;
@@ -89,9 +94,9 @@ void Graph::to_json(const std::string &dataset, const std::string &instance_id) 
     j["nodes"] = nlohmann::json::array();
     uint16_t n = nodes_count();
     for (uint16_t i = 0; i < n; ++i)
-        j["nodes"].push_back({{"name", node_names_[i], {"id", i}}});
+        j["nodes"].push_back({{"name", node_names_[i]}, {"id", i}});
 
-    // préparatio, des arcs
+    // préparation des arcs
     j["links"] = nlohmann::json::array();
     for (const auto &edge : all_edges_)
         j["links"].push_back({{"id", edge.id}, {"from", edge.source_node}, {"to", edge.target_node}, {"metric", edge.weight}, {"capacity", edge.capacity}});
@@ -102,4 +107,57 @@ void Graph::to_json(const std::string &dataset, const std::string &instance_id) 
         throw std::runtime_error("Impossible de sauvegarder la solution dans : " + json_path);
 
     file << j;
+}
+
+/**
+ * @brief Surcharge de l'opérateur d'affichage pour la classe Graph.
+ *
+ */
+std::ostream &operator<<(std::ostream &os, const Graph &graph)
+{
+    os << "========== GRAPH SUMMARY ==========\n";
+    os << " Nodes       : " << graph.nodes_count() << "\n";
+    os << " Edges       : " << graph.edges_count() << "\n";
+    os << " Density     : " << (graph.density() * 100.0) << " %\n";
+
+    os << "\n First 5 edges samples:\n";
+    for (uint16_t i = 0; i < std::min((uint16_t)5, (uint16_t)graph.edges_count()); ++i)
+        os << "  " << graph.edge(i) << "\n";
+
+    os << " Incoming Edges (Sample for first 5 nodes):\n";
+
+    // Boucle 1 : On parcourt chaque nœud (le vecteur extérieur)
+    // On force std::min à traiter les deux comme des uint16_t
+    for (uint16_t n = 0; n < std::min<uint16_t>(5, graph.nodes_count()); ++n)
+    {
+        os << "  Node " << n << " <- [";
+
+        // On récupère le vecteur d'IDs d'arcs entrant pour ce nœud
+        const std::vector<uint16_t> &incoming = graph.in_edges_[n];
+
+        // Boucle 2 : On parcourt les IDs stockés dans ce sous-vecteur
+        for (size_t i = 0; i < incoming.size(); ++i)
+        {
+            os << incoming[i] << (i == incoming.size() - 1 ? "" : ", ");
+        }
+        os << "]\n";
+    }
+    os << " Outcoming Edges (Sample for first 5 nodes):\n";
+    for (uint16_t n = 0; n < std::min<uint16_t>(5, graph.nodes_count()); ++n)
+    {
+        os << "  Node " << n << " -> [";
+
+        // On récupère le vecteur d'IDs d'arcs entrant pour ce nœud
+        const std::vector<uint16_t> &outcoming = graph.out_edges_[n];
+
+        // Boucle 2 : On parcourt les IDs stockés dans ce sous-vecteur
+        for (size_t i = 0; i < outcoming.size(); ++i)
+        {
+            os << outcoming[i] << (i == outcoming.size() - 1 ? "" : ", ");
+        }
+        os << "]\n";
+    }
+    os << "===================================\n";
+
+    return os;
 }

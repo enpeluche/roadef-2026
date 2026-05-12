@@ -9,12 +9,10 @@
  */
 struct DemandBase
 {
-    uint16_t id; ///< Id unique d'une demande.
-
+    uint16_t id;     ///< Id unique d'une demande.
     uint16_t source; ///< id du noeud source
     uint16_t target; ///< id du noeud destination
-
-    double n1;   ///< Norme 1 d'une demande : somme de ses éléménts.
-    double n2;   ///< Norme euclidienne d'une demande.
-    double ninf; ///< Norme infini d'une demande : max de ses éléménts.
+    double n1;       ///< Norme 1 d'une demande : somme de ses éléménts.
+    double n2;       ///< Norme euclidienne d'une demande.
+    double ninf;     ///< Norme infini d'une demande : max de ses éléménts.
 };

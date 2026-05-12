@@ -10,6 +10,12 @@
 class TrafficData
 {
 public:
+    TrafficData(uint16_t num_slots,
+                const std::vector<DemandBase> &demands,
+                const std::vector<double> &volumes);
+
+    TrafficData() = default;
+
     uint16_t demands_count() const { return static_cast<uint16_t>(info_.size()); }
     uint16_t slots_count() const { return num_time_slots_; }
 
@@ -18,6 +24,8 @@ public:
     const DemandBase &get_info(uint16_t demand_id) const { return info_[demand_id]; }
 
     static TrafficData load(const std::string &dataset, const std::string &instance_id);
+
+    friend std::ostream &operator<<(std::ostream &os, const TrafficData &td);
 
 private:
     std::vector<DemandBase> info_;

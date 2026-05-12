@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "edge.hpp"
 #include "shortest_path_tree.hpp"
+#include <boost/dynamic_bitset.hpp>
 
 // remplacer les mots edge par les mots link ?
 // virer les vector de vector
@@ -72,8 +73,9 @@ public:
 
     uint16_t edges_count() const { return static_cast<uint16_t>(all_edges_.size()); }
     uint16_t nodes_count() const { return node_count_; }
+    uint8_t num_time_slots() const { return num_time_slots_; }
 
-    ShortestPathTree shortest_path_tree(uint16_t source_node) const;
+    ShortestPathTree shortest_path_tree(uint16_t source_node, uint8_t t) const;
 
     friend std::ostream &operator<<(std::ostream &os, const Graph &graph);
 
@@ -91,13 +93,14 @@ public:
         return static_cast<double>(edges_count()) / max_edges;
     }
 
+    boost::dynamic_bitset<> get_timeline(uint8_t t) const { return topology_timeline_[t]; }
+
 private:
-    const uint16_t node_count_; ///< Le nombre de noeud du graphe.
-
-    std::vector<Edge> all_edges_; ///< Le vecteur des Edge du graphe.
-
-    std::vector<std::vector<uint16_t>> in_edges_;  ///< Un vecteur qui contient pour chaque index le vecteur des indices des Edge entrant.
-    std::vector<std::vector<uint16_t>> out_edges_; ///< Un vecteur qui contient pour chaque index le vecteur des indices des Edge sortant.
-
-    std::vector<std::string> node_names_; ///< Le vecteur du nom des noeuds.
+    const uint16_t node_count_;                              ///< Le nombre de noeud du graphe.
+    std::vector<Edge> all_edges_;                            ///< Le vecteur des Edge du graphe.
+    std::vector<std::vector<uint16_t>> in_edges_;            ///< Un vecteur qui contient pour chaque index le vecteur des indices des Edge entrant.
+    std::vector<std::vector<uint16_t>> out_edges_;           ///< Un vecteur qui contient pour chaque index le vecteur des indices des Edge sortant.
+    std::vector<std::string> node_names_;                    ///< Le vecteur du nom des noeuds.
+    std::vector<boost::dynamic_bitset<>> topology_timeline_; ///< Mer de bit représentant la disponibilité d'un arc à un timestep.
+    uint8_t num_time_slots_;                                 ///< Nombre de timestep
 };

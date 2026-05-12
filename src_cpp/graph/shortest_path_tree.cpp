@@ -3,7 +3,8 @@
 #include "shortest_path_tree.hpp"
 #include "graph.hpp"
 
-// des vecteurs de travail en paramètre ?
+// idea : des vecteurs de travail en paramètre, pour plus tard
+
 #include <iostream>
 #include <iomanip> // pour std::setw
 
@@ -17,7 +18,6 @@ std::ostream &operator<<(std::ostream &os, const ShortestPathTree &spt)
     os << "  Dest | Distance | Predecessor Edges (IDs)\n";
     os << "  -----------------------------------------\n";
 
-    // On affiche les 5 premiers nœuds (différents de la source)
     uint16_t displayed = 0;
     for (uint16_t i = 0; i < spt.distances.size(); ++i)
     {
@@ -27,22 +27,19 @@ std::ostream &operator<<(std::ostream &os, const ShortestPathTree &spt)
         os << "  " << std::setw(4) << i << " | "
            << std::setw(8) << spt.distances[i] << " | [";
 
-        // Récupération des prédécesseurs via tes méthodes inline
+        // Récupération des prédécesseurs
         const uint16_t *begin = spt.get_predecessors_begin(i);
         const uint16_t *end = spt.get_predecessors_end(i);
 
         for (const uint16_t *it = begin; it != end; ++it)
-        {
             os << *it << (it + 1 == end ? "" : ", ");
-        }
 
         os << "]\n";
         displayed++;
     }
-    os << "========================================\n";
     return os;
 }
-ShortestPathTree Graph::shortest_path_tree(uint16_t source_node) const
+ShortestPathTree Graph::shortest_path_tree(uint16_t source_node, uint8_t t) const
 {
     const uint16_t n = nodes_count();
     const double infty = std::numeric_limits<double>::infinity();
@@ -67,6 +64,10 @@ ShortestPathTree Graph::shortest_path_tree(uint16_t source_node) const
 
         for (uint16_t edge_id : out_edges_[u])
         {
+            // Pruning natif via la mer de bits
+            if (!topology_timeline_[t].test(edge_id))
+                continue;
+
             const auto &edge = all_edges_[edge_id];
             double new_dist = d + edge.weight;
             uint16_t v = edge.target_node;
@@ -92,6 +93,7 @@ ShortestPathTree Graph::shortest_path_tree(uint16_t source_node) const
     result.source_node = source_node;
     result.distances = std::move(distances);
 
+    result.edge_membership.resize(all_edges_.size(), false);
     result.predecessor_edge_offsets.resize(n + 1);
 
     // Nombre total de prédecesseur
@@ -109,6 +111,9 @@ ShortestPathTree Graph::shortest_path_tree(uint16_t source_node) const
         for (uint16_t edge_id : temp_predecessors[v])
         {
             result.predecessor_edge_ids.push_back(edge_id);
+
+            result.edge_membership.set(edge_id);
+
             current_offset++;
         }
     }

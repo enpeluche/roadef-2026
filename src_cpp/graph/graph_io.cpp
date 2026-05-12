@@ -20,53 +20,72 @@ using json = nlohmann::json;
  */
 Graph Graph::from_json(const std::string &dataset, const std::string &instance_id)
 {
-    // Lecture du fichier
-    std::string json_path = "instances/" + dataset + "/" + dataset + "-" + instance_id + "-net.json";
+    // Étape 0 : Lecture des fichiers
 
-    std::ifstream file(json_path);
+    std::string base_path = "instances/" + dataset + "/" + dataset + "-" + instance_id;
 
-    if (!file.is_open())
-        throw std::runtime_error("Impossible d'ouvrir le fichier :" + json_path);
+    auto load_json = [](const std::string &filepath)
+    {
+        std::ifstream file(filepath);
+        if (!file.is_open())
+            throw std::runtime_error("Impossible d'ouvrir le fichier : " + filepath);
+        return json::parse(file);
+    };
 
-    // Parsing du fichier
-    json data = json::parse(file);
+    json network_data = load_json(base_path + "-net.json");
+    json scenario_data = load_json(base_path + "-scenario.json");
+    json tm_data = load_json(base_path + "-tm.json");
 
-    const auto &nodes = data["nodes"];
-    const auto &links = data["links"];
+    // Étape 1 :  Début du parsing
+
+    const auto &nodes = network_data["nodes"]; // Liste des noeuds.
+    const auto &links = network_data["links"]; // Liste des arcs.
 
     Graph g(nodes.size());
     g.all_edges_.reserve(links.size());
 
-    // Création des noeuds
+    // --- Création des noeuds
     for (const auto &node : nodes)
-    {
-        uint16_t id = node["id"].get<uint16_t>();
-        g.node_names_[id] = node["name"].get<std::string>();
-    }
+        g.node_names_[node["id"].get<uint16_t>()] = node["name"].get<std::string>();
 
-    // Création des arcs
+    // === Création des arcs
     for (const auto &link : links)
         g.add_edge(link["from"].get<uint16_t>(), link["to"].get<uint16_t>(), link["metric"].get<double>(), link["capacity"].get<double>());
 
-    // Tri des listes d'arcs sortants par noeud cible
+    // ---> Tri des d'arcs sortants par noeud cible
     for (uint16_t i = 0; i < g.nodes_count(); ++i)
-    {
         std::sort(g.out_edges_[i].begin(), g.out_edges_[i].end(),
                   [&g](uint32_t a, uint32_t b)
                   {
                       return g.all_edges_[a].target_node < g.all_edges_[b].target_node;
                   });
-    }
 
-    // Tri des listes d'arcs entrants par noeud source
+    // ---> Tri des d'arcs entrants par noeud source
     for (uint16_t i = 0; i < g.nodes_count(); ++i)
-    {
         std::sort(g.in_edges_[i].begin(), g.in_edges_[i].end(),
                   [&g](uint32_t a, uint32_t b)
                   {
                       return g.all_edges_[a].source_node < g.all_edges_[b].source_node;
                   });
-    }
+
+    // === Création de la mer de bits.
+
+    g.num_time_slots_ = tm_data["num_time_slots"]; // Nombre de times slots
+
+    // Initialiser la mer de bits (tous les arcs sont UP par défaut)
+    g.topology_timeline_.assign(g.num_time_slots_, boost::dynamic_bitset<>(g.all_edges_.size()));
+    for (int t = 0; t < g.num_time_slots_; ++t)
+        g.topology_timeline_[t].set(); // .set() met tous les bits à 1
+
+    // Appliquer les pannes (mettre à 0 les arcs impactés par les interventions)
+    if (scenario_data.contains("interventions"))
+        for (const auto &inter : scenario_data["interventions"])
+        {
+            int t = inter["t"].get<int>();
+            for (int link_id : inter["links"])
+                g.topology_timeline_[t].reset(link_id); // .reset() met le bit à 0 (DOWN)
+        }
+
     return g;
 }
 /**
@@ -127,7 +146,6 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph)
     os << " Incoming Edges (Sample for first 5 nodes):\n";
 
     // Boucle 1 : On parcourt chaque nœud (le vecteur extérieur)
-    // On force std::min à traiter les deux comme des uint16_t
     for (uint16_t n = 0; n < std::min<uint16_t>(5, graph.nodes_count()); ++n)
     {
         os << "  Node " << n << " <- [";
@@ -135,11 +153,9 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph)
         // On récupère le vecteur d'IDs d'arcs entrant pour ce nœud
         const std::vector<uint16_t> &incoming = graph.in_edges_[n];
 
-        // Boucle 2 : On parcourt les IDs stockés dans ce sous-vecteur
         for (size_t i = 0; i < incoming.size(); ++i)
-        {
             os << incoming[i] << (i == incoming.size() - 1 ? "" : ", ");
-        }
+
         os << "]\n";
     }
     os << " Outcoming Edges (Sample for first 5 nodes):\n";
@@ -150,14 +166,11 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph)
         // On récupère le vecteur d'IDs d'arcs entrant pour ce nœud
         const std::vector<uint16_t> &outcoming = graph.out_edges_[n];
 
-        // Boucle 2 : On parcourt les IDs stockés dans ce sous-vecteur
         for (size_t i = 0; i < outcoming.size(); ++i)
-        {
             os << outcoming[i] << (i == outcoming.size() - 1 ? "" : ", ");
-        }
+
         os << "]\n";
     }
-    os << "===================================\n";
 
     return os;
 }

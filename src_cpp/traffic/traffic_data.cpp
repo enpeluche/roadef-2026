@@ -17,6 +17,9 @@ TrafficData::TrafficData(uint16_t num_slots,
     compute_all_norms_();
 }
 
+/**
+ * Calcule les normes 1, 2 et infini de chaque demandes.
+ */
 void TrafficData::compute_all_norms_()
 {
     uint16_t n = info_.size();

@@ -31,7 +31,7 @@ void SPTManager::build_all(const Graph &g)
     for (uint8_t t = 0; t < n_slots; ++t)
         outages[t] = ~g.get_timeline(t); // On pré-calcule l'inverse une seule fois par slot
 
-    for (uint8_t t = 1; t < n_slots; ++t)
+    for (uint8_t t = 1; t < n_slots; ++t) // inverser l'ordre des boucles et faire un pragma critical ?
         for (uint16_t i = 0; i < n_nodes; ++i)
         {
             ShortestPathTree *prev_spt = access_table_[t - 1][i];

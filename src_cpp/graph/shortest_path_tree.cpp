@@ -14,7 +14,6 @@ std::ostream &operator<<(std::ostream &os, const ShortestPathTree &spt)
     os << " Source Node : " << spt.source_node << "\n";
     os << " Nodes found : " << spt.distances.size() << "\n";
 
-    os << "\n First 5 destinations (Sample):\n";
     os << "  Dest | Distance | Predecessor Edges (IDs)\n";
     os << "  -----------------------------------------\n";
 

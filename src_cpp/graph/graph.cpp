@@ -59,3 +59,36 @@ double Graph::node_pressure_index(uint16_t node_id) const
 
     return in / out;
 }
+
+/**
+ * @brief Retire physiquement les arcs des listes d'adjacence selon un masque.
+ * @param to_remove_mask Un bitset où 'true' signifie que l'arc doit être retiré.
+ */
+void Graph::filter_edges(const boost::dynamic_bitset<>& to_remove_mask) {
+    if (to_remove_mask.none()) return;
+
+    for (uint16_t i = 0; i < node_count_; ++i) {
+        // Filtrage des arcs sortants
+        auto& out = out_edges_[i];
+        out.erase(std::remove_if(out.begin(), out.end(), [&](uint16_t id) {
+            return to_remove_mask.test(id);
+        }), out.end());
+
+        // Filtrage des arcs entrants
+        auto& in = in_edges_[i];
+        in.erase(std::remove_if(in.begin(), in.end(), [&](uint16_t id) {
+            return to_remove_mask.test(id);
+        }), in.end());
+    }
+
+    // On s'assure que la timeline est synchronisée (un arc filtré est mort pour toujours)
+    for (auto& slot_bits : topology_timeline_) {
+        slot_bits &= ~to_remove_mask;
+    }
+}
+
+uint32_t Graph::active_edges_count() const {
+    uint32_t count = 0;
+    for (const auto& out : out_edges_) count += out.size();
+    return count;
+}

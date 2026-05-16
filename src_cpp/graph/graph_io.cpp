@@ -134,43 +134,41 @@ void Graph::to_json(const std::string &dataset, const std::string &instance_id) 
  */
 std::ostream &operator<<(std::ostream &os, const Graph &graph)
 {
-    os << "========== GRAPH SUMMARY ==========\n";
+    os << "Graph:\n";
     os << " Nodes       : " << graph.nodes_count() << "\n";
-    os << " Edges       : " << graph.edges_count() << "\n";
+    os << " Edges (Tot) : " << graph.active_edges_count() << "\n";
     os << " Density     : " << (graph.density() * 100.0) << " %\n";
 
+    // --- Statistiques des degrés ---
+    std::map<uint16_t, uint16_t> in_degree_dist;
+    std::map<uint16_t, uint16_t> out_degree_dist;
+
+    for (uint16_t n = 0; n < graph.nodes_count(); ++n)
+    {
+        in_degree_dist[graph.in_degree(n)]++;
+        out_degree_dist[graph.out_degree(n)]++;
+    }
+
+    auto print_dist = [&](const std::string &label, const std::map<uint16_t, uint16_t> &dist)
+    {
+        os << " " << label << " Distribution :\n  ";
+        int count = 0;
+        for (auto const &[deg, freq] : dist)
+        {
+            os << "Deg[" << deg << "]:" << freq << " | ";
+            if (++count % 5 == 0)
+                os << "\n  "; // Retour à la ligne pour la lisibilité
+        }
+        os << "\n";
+    };
+
+    os << "\n";
+    print_dist("In-Degree ", in_degree_dist);
+    print_dist("Out-Degree", out_degree_dist);
+
     os << "\n First 5 edges samples:\n";
-    for (uint16_t i = 0; i < std::min((uint16_t)5, (uint16_t)graph.edges_count()); ++i)
+    for (uint16_t i = 0; i < std::min((uint16_t)5, graph.edges_count()); ++i)
         os << "  " << graph.edge(i) << "\n";
-
-    os << " Incoming Edges (Sample for first 5 nodes):\n";
-
-    // Boucle 1 : On parcourt chaque nœud (le vecteur extérieur)
-    for (uint16_t n = 0; n < std::min<uint16_t>(5, graph.nodes_count()); ++n)
-    {
-        os << "  Node " << n << " <- [";
-
-        // On récupère le vecteur d'IDs d'arcs entrant pour ce nœud
-        const std::vector<uint16_t> &incoming = graph.in_edges_[n];
-
-        for (size_t i = 0; i < incoming.size(); ++i)
-            os << incoming[i] << (i == incoming.size() - 1 ? "" : ", ");
-
-        os << "]\n";
-    }
-    os << " Outcoming Edges (Sample for first 5 nodes):\n";
-    for (uint16_t n = 0; n < std::min<uint16_t>(5, graph.nodes_count()); ++n)
-    {
-        os << "  Node " << n << " -> [";
-
-        // On récupère le vecteur d'IDs d'arcs entrant pour ce nœud
-        const std::vector<uint16_t> &outcoming = graph.out_edges_[n];
-
-        for (size_t i = 0; i < outcoming.size(); ++i)
-            os << outcoming[i] << (i == outcoming.size() - 1 ? "" : ", ");
-
-        os << "]\n";
-    }
 
     return os;
 }

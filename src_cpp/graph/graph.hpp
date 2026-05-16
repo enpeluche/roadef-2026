@@ -90,10 +90,12 @@ public:
             return 0.0;
 
         double max_edges = static_cast<double>(n) * (n - 1);
-        return static_cast<double>(edges_count()) / max_edges;
+        return static_cast<double>(active_edges_count()) / max_edges;
     }
 
     boost::dynamic_bitset<> get_timeline(uint8_t t) const { return topology_timeline_[t]; }
+    void filter_edges(const boost::dynamic_bitset<> &to_remove_mask);
+    uint32_t active_edges_count() const;
 
 private:
     const uint16_t node_count_;                              ///< Le nombre de noeud du graphe.

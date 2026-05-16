@@ -12,12 +12,11 @@
  */
 struct Edge
 {
-    uint32_t id;          ///< Identifiant unique de l'arc.
+    uint16_t id;          ///< Identifiant unique de l'arc.
     uint16_t source_node; ///< Identifiant du noeud source.
     uint16_t target_node; ///< Identifiant du noeud destination.
-
-    double weight;   ///< Poids de l'arc.
-    double capacity; ///< Capacité de l'arc.
+    double weight;        ///< Poids de l'arc.
+    double capacity;      ///< Capacité de l'arc.
 
     /**
      * @brief Surcharge l'opérateur d'affichage pour la structure Edge.

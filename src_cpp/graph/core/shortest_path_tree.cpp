@@ -1,4 +1,4 @@
-// graph/shortest_path_tree.cpp
+// graph/core/shortest_path_tree.cpp
 
 #include "shortest_path_tree.hpp"
 #include "graph.hpp"
@@ -38,7 +38,7 @@ std::ostream &operator<<(std::ostream &os, const ShortestPathTree &spt)
     }
     return os;
 }
-ShortestPathTree Graph::shortest_path_tree(uint16_t source_node, uint8_t t) const
+ShortestPathTree Graph::shortest_path_tree(uint16_t source_node, uint8_t t, DijkstraWorkspace &ws) const
 {
     const uint16_t n = nodes_count();
     const double infty = std::numeric_limits<double>::infinity();

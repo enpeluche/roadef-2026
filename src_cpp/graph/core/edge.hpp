@@ -1,4 +1,4 @@
-// graph/edge.hpp
+// graph/core/edge.hpp
 
 #pragma once
 

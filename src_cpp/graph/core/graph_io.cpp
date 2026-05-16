@@ -1,4 +1,4 @@
-// graph_io.cpp
+// graph/core/graph_io.cpp
 
 // TODO : convertir nlohmann en simdjson
 
@@ -51,22 +51,6 @@ Graph Graph::from_json(const std::string &dataset, const std::string &instance_i
     // === Création des arcs
     for (const auto &link : links)
         g.add_edge(link["from"].get<uint16_t>(), link["to"].get<uint16_t>(), link["metric"].get<double>(), link["capacity"].get<double>());
-
-    // ---> Tri des d'arcs sortants par noeud cible
-    for (uint16_t i = 0; i < g.nodes_count(); ++i)
-        std::sort(g.out_edges_[i].begin(), g.out_edges_[i].end(),
-                  [&g](uint32_t a, uint32_t b)
-                  {
-                      return g.all_edges_[a].target_node < g.all_edges_[b].target_node;
-                  });
-
-    // ---> Tri des d'arcs entrants par noeud source
-    for (uint16_t i = 0; i < g.nodes_count(); ++i)
-        std::sort(g.in_edges_[i].begin(), g.in_edges_[i].end(),
-                  [&g](uint32_t a, uint32_t b)
-                  {
-                      return g.all_edges_[a].source_node < g.all_edges_[b].source_node;
-                  });
 
     // === Création de la mer de bits.
 

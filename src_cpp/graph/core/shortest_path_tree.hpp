@@ -1,4 +1,4 @@
-// graph/shortest_path_tree.hpp
+// graph/core/shortest_path_tree.hpp
 
 #pragma once
 
@@ -8,6 +8,29 @@
 #include <queue>
 #include <boost/dynamic_bitset.hpp>
 #include <iostream>
+
+struct DijkstraWorkspace
+{
+    static constexpr double INF = std::numeric_limits<double>::infinity();
+    using Element = std::pair<double, uint16_t>;
+
+    std::vector<double> distances;
+    std::vector<std::vector<uint16_t>> temp_predecessors;
+    std::priority_queue<Element, std::vector<Element>, std::greater<Element>> pq;
+
+    void prepare(uint16_t n)
+    {
+        distances.assign(n, INF);
+
+        if (temp_predecessors.size() < n)
+            temp_predecessors.resize(n);
+        for (auto &v : temp_predecessors)
+            v.clear();
+
+        decltype(pq) empty;
+        std::swap(pq, empty);
+    }
+};
 
 /**
  * @brief Représente un arbre des plus courts chemins partant d'un noeud source.

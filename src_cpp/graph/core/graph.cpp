@@ -1,4 +1,4 @@
-// graph/graph.cpp
+// graph/core/graph.cpp
 // clang-format off
 
 #include "graph.hpp"
@@ -63,6 +63,13 @@ double Graph::node_pressure_index(uint16_t node_id) const
 /**
  * @brief Retire physiquement les arcs des listes d'adjacence selon un masque.
  * @param to_remove_mask Un bitset où 'true' signifie que l'arc doit être retiré.
+ * 
+ * @warning 5. filter_edges désynchronise all_edges_.
+ * Tu supprimes des entrées dans in_edges_/out_edges_ mais all_edges_ garde tout.
+ * Du coup edges_count() ment, total_cap() compte les arcs morts, et tout code
+ * qui itère all_edges_ voit des fantômes. Soit tu documentes clairement
+ * « all_edges_ est l'arène, on n'y touche jamais, source de vérité = adjacences + bitset »,
+ * soit tu compactes vraiment (mais alors faut reremapper les IDs partout — coûteux).
  */
 void Graph::filter_edges(const boost::dynamic_bitset<>& to_remove_mask) {
     if (to_remove_mask.none()) return;

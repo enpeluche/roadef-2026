@@ -1,4 +1,4 @@
-// graph/graph.hpp
+// graph/core/graph.hpp
 
 #pragma once
 
@@ -15,7 +15,7 @@
 class Graph
 {
 public:
-    static constexpr uint32_t INVALID_EDGE = 0xFFFFFFFF;
+    static constexpr uint16_t INVALID_EDGE = 0xFFFF;
 
     Graph() = default;
 
@@ -28,11 +28,25 @@ public:
     uint16_t add_edge(uint16_t source_node, uint16_t target_node, double weight, double capacity)
     {
         uint16_t id = static_cast<uint16_t>(all_edges_.size());
-
         all_edges_.push_back({id, source_node, target_node, weight, capacity});
 
-        in_edges_[target_node].push_back(id);
-        out_edges_[source_node].push_back(id);
+        // Insertion triée dans out_edges_[source] par target_node
+        auto &out = out_edges_[source_node];
+        auto out_pos = std::lower_bound(out.begin(), out.end(), target_node,
+                                        [this](uint16_t eid, uint16_t target)
+                                        {
+                                            return all_edges_[eid].target_node < target;
+                                        });
+        out.insert(out_pos, id);
+
+        // Insertion triée dans in_edges_[target] par source_node
+        auto &in = in_edges_[target_node];
+        auto in_pos = std::lower_bound(in.begin(), in.end(), source_node,
+                                       [this](uint16_t eid, uint16_t source)
+                                       {
+                                           return all_edges_[eid].source_node < source;
+                                       });
+        in.insert(in_pos, id);
 
         return id;
     }
@@ -75,7 +89,7 @@ public:
     uint16_t nodes_count() const { return node_count_; }
     uint8_t num_time_slots() const { return num_time_slots_; }
 
-    ShortestPathTree shortest_path_tree(uint16_t source_node, uint8_t t) const;
+    ShortestPathTree shortest_path_tree(uint16_t source_node, uint8_t t, DijkstraWorkspace &ws) const;
 
     friend std::ostream &operator<<(std::ostream &os, const Graph &graph);
 
@@ -93,12 +107,12 @@ public:
         return static_cast<double>(active_edges_count()) / max_edges;
     }
 
-    boost::dynamic_bitset<> get_timeline(uint8_t t) const { return topology_timeline_[t]; }
+    const boost::dynamic_bitset<> &get_timeline(uint8_t t) const { return topology_timeline_[t]; }
     void filter_edges(const boost::dynamic_bitset<> &to_remove_mask);
     uint32_t active_edges_count() const;
 
 private:
-    const uint16_t node_count_;                              ///< Le nombre de noeud du graphe.
+    uint16_t node_count_;                                    ///< Le nombre de noeud du graphe.
     std::vector<Edge> all_edges_;                            ///< Le vecteur des Edge du graphe.
     std::vector<std::vector<uint16_t>> in_edges_;            ///< Un vecteur qui contient pour chaque index le vecteur des indices des Edge entrant.
     std::vector<std::vector<uint16_t>> out_edges_;           ///< Un vecteur qui contient pour chaque index le vecteur des indices des Edge sortant.

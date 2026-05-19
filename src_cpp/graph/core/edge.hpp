@@ -2,8 +2,28 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <iostream>
+
+namespace EdgeConsts
+{
+    /**
+     * Facteur de conversion double→uint64 pour les poids.
+     * Choisi pour conserver 8 chiffres significatifs.
+     */
+    constexpr uint64_t WEIGHT_SCALE = 100'000'000ULL; // 1e8
+
+    inline uint64_t to_int(double w)
+    {
+        return static_cast<uint64_t>(std::round(w * WEIGHT_SCALE));
+    }
+
+    inline double to_double(uint64_t w)
+    {
+        return static_cast<double>(w) / static_cast<double>(WEIGHT_SCALE);
+    }
+}
 
 /**
  * @brief Une structure représentant un arc pour un réseau télécom.
@@ -12,11 +32,11 @@
  */
 struct Edge
 {
-    uint16_t id;          ///< Identifiant unique de l'arc.
-    uint16_t source_node; ///< Identifiant du noeud source.
-    uint16_t target_node; ///< Identifiant du noeud destination.
-    double weight;        ///< Poids de l'arc.
-    double capacity;      ///< Capacité de l'arc.
+    uint16_t id;     ///< Identifiant unique de l'arc.
+    uint16_t source; ///< Identifiant du noeud source.
+    uint16_t target; ///< Identifiant du noeud destination.
+    uint64_t weight; ///< Poids de l'arc, utilisé pour les PCC.
+    double capacity; ///< Capacité de l'arc.
 
     /**
      * @brief Surcharge l'opérateur d'affichage pour la structure Edge.
@@ -24,7 +44,7 @@ struct Edge
     friend std::ostream &operator<<(std::ostream &os, const Edge &edge)
     {
         os << "Edge(" << edge.id << ", "
-           << edge.source_node << "->" << edge.target_node
+           << edge.source << "->" << edge.target
            << ", [w=" << edge.weight << ", c=" << edge.capacity << "])";
 
         return os;

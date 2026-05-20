@@ -2,12 +2,14 @@
 
 // TODO : convertir nlohmann en simdjson
 
-#include "graph.hpp"
+#include "graph/core/edge.hpp"
+#include "graph/core/graph.hpp"
+
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
-#include <limits>
-#include <queue>
+#include <iomanip>
+#include <map>
 
 using json = nlohmann::json;
 
@@ -21,7 +23,6 @@ using json = nlohmann::json;
 Graph Graph::from_json(const std::string &dataset, const std::string &instance_id)
 {
     // Étape 0 : Lecture des fichiers
-
     std::string base_path = "instances/" + dataset + "/" + dataset + "-" + instance_id;
 
     auto load_json = [](const std::string &filepath)
@@ -36,42 +37,48 @@ Graph Graph::from_json(const std::string &dataset, const std::string &instance_i
     json scenario_data = load_json(base_path + "-scenario.json");
     json tm_data = load_json(base_path + "-tm.json");
 
-    // Étape 1 :  Début du parsing
-
-    const auto &nodes = network_data["nodes"]; // Liste des noeuds.
-    const auto &links = network_data["links"]; // Liste des arcs.
+    // Étape 1 : Début du parsing
+    const auto &nodes = network_data["nodes"];
+    const auto &links = network_data["links"];
 
     Graph g(nodes.size());
     g.all_edges_.reserve(links.size());
 
-    // --- Création des noeuds
+    // Création des nœuds
     for (const auto &node : nodes)
         g.node_names_[node["id"].get<uint16_t>()] = node["name"].get<std::string>();
 
-    // === Création des arcs
+    // Création des arcs avec conversion poids double → uint64
     for (const auto &link : links)
-        g.add_edge(link["from"].get<uint16_t>(), link["to"].get<uint16_t>(), link["metric"].get<double>(), link["capacity"].get<double>());
+    {
+        const double metric_raw = link["metric"].get<double>();
+        const uint64_t metric_int = EdgeConsts::to_int(metric_raw);
 
-    // === Création de la mer de bits.
+        g.add_edge(
+            link["from"].get<uint16_t>(),
+            link["to"].get<uint16_t>(),
+            metric_int,
+            link["capacity"].get<double>());
+    }
 
-    g.num_time_slots_ = tm_data["num_time_slots"]; // Nombre de times slots
-
-    // Initialiser la mer de bits (tous les arcs sont UP par défaut)
+    // Mer de bits
+    g.num_time_slots_ = tm_data["num_time_slots"];
     g.topology_timeline_.assign(g.num_time_slots_, boost::dynamic_bitset<>(g.all_edges_.size()));
     for (int t = 0; t < g.num_time_slots_; ++t)
-        g.topology_timeline_[t].set(); // .set() met tous les bits à 1
+        g.topology_timeline_[t].set();
 
-    // Appliquer les pannes (mettre à 0 les arcs impactés par les interventions)
     if (scenario_data.contains("interventions"))
         for (const auto &inter : scenario_data["interventions"])
         {
             int t = inter["t"].get<int>();
             for (int link_id : inter["links"])
-                g.topology_timeline_[t].reset(link_id); // .reset() met le bit à 0 (DOWN)
+                g.topology_timeline_[t].reset(link_id);
         }
 
+    g.freeze();
     return g;
 }
+
 /**
  * @brief Exporte un graphe sous le bon format json du challenge ROADEF.
  * Va chercher les instances dans le dossier instances.
@@ -83,28 +90,29 @@ Graph Graph::from_json(const std::string &dataset, const std::string &instance_i
 void Graph::to_json(const std::string &dataset, const std::string &instance_id) const
 {
     std::string json_path = "instances/" + dataset + "/" + dataset + "-" + instance_id + "-net.json";
-
     std::filesystem::path path(json_path);
     std::filesystem::create_directories(path.parent_path());
 
     nlohmann::ordered_json j;
-
-    // informations toujours vraies
     j["directed"] = true;
     j["multigraph"] = false;
 
-    // préparation des noeuds
     j["nodes"] = nlohmann::json::array();
     uint16_t n = nodes_count();
     for (uint16_t i = 0; i < n; ++i)
         j["nodes"].push_back({{"name", node_names_[i]}, {"id", i}});
 
-    // préparation des arcs
     j["links"] = nlohmann::json::array();
     for (const auto &edge : all_edges_)
-        j["links"].push_back({{"id", edge.id}, {"from", edge.source_node}, {"to", edge.target_node}, {"metric", edge.weight}, {"capacity", edge.capacity}});
+    {
+        const double metric_double = EdgeConsts::to_double(edge.weight);
+        j["links"].push_back({{"id", edge.id},
+                              {"from", edge.source},
+                              {"to", edge.target},
+                              {"metric", metric_double},
+                              {"capacity", edge.capacity}});
+    }
 
-    // on pousse
     std::ofstream file(json_path);
     if (!file.is_open())
         throw std::runtime_error("Impossible de sauvegarder la solution dans : " + json_path);
@@ -118,12 +126,10 @@ void Graph::to_json(const std::string &dataset, const std::string &instance_id) 
  */
 std::ostream &operator<<(std::ostream &os, const Graph &graph)
 {
-    os << "Graph:\n";
-    os << " Nodes       : " << graph.nodes_count() << "\n";
-    os << " Edges (Tot) : " << graph.active_edges_count() << "\n";
-    os << " Density     : " << (graph.density() * 100.0) << " %\n";
+    os << "Graph [|V|=" << graph.nodes_count()
+       << ", |E|=" << graph.edges_count()
+       << ", d=" << std::fixed << std::setprecision(2) << (graph.density() * 100.0) << "%]\n";
 
-    // --- Statistiques des degrés ---
     std::map<uint16_t, uint16_t> in_degree_dist;
     std::map<uint16_t, uint16_t> out_degree_dist;
 
@@ -135,24 +141,35 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph)
 
     auto print_dist = [&](const std::string &label, const std::map<uint16_t, uint16_t> &dist)
     {
-        os << " " << label << " Distribution :\n  ";
-        int count = 0;
+        os << " " << label << ": ";
+        bool first = true;
         for (auto const &[deg, freq] : dist)
         {
-            os << "Deg[" << deg << "]:" << freq << " | ";
-            if (++count % 5 == 0)
-                os << "\n  "; // Retour à la ligne pour la lisibilité
+            if (!first)
+                os << " ";
+            os << "d=" << deg << "(" << freq << ")";
+            first = false;
         }
         os << "\n";
     };
 
-    os << "\n";
-    print_dist("In-Degree ", in_degree_dist);
-    print_dist("Out-Degree", out_degree_dist);
+    print_dist("In-Deg ", in_degree_dist);
+    print_dist("Out-Deg", out_degree_dist);
 
-    os << "\n First 5 edges samples:\n";
-    for (uint16_t i = 0; i < std::min((uint16_t)5, graph.edges_count()); ++i)
-        os << "  " << graph.edge(i) << "\n";
+    os << " Edges  : ";
+    uint16_t limit = std::min(static_cast<uint16_t>(5), graph.edges_count());
+
+    for (uint16_t i = 0; i < limit; ++i)
+    {
+        const auto &e = graph.edge(i);
+        os << e.id << "[" << e.source << "->" << e.target << "]";
+        if (i < limit - 1)
+            os << " ";
+    }
+
+    os << "\n";
+
+    os.unsetf(std::ios_base::floatfield);
 
     return os;
 }

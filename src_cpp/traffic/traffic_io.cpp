@@ -25,14 +25,14 @@ TrafficData TrafficData::load(const std::string &dataset, const std::string &ins
         const auto &item = json_demands[i];
         DemandBase d;
         d.id = i;
-        d.source = item.at("s").get<uint16_t>();
-        d.target = item.at("t").get<uint16_t>();
+        d.source = item.at("s").get<NodeCount>();
+        d.target = item.at("t").get<NodeCount>();
 
         const auto &v = item.at("v");
 
         double *dest = td.all_volumes_.data() + i * td.num_time_slots_;
 
-        for (uint16_t t = 0; t < td.num_time_slots_; ++t)
+        for (Tick t = 0; t < td.num_time_slots_; ++t)
             dest[t] = v[t].get<double>();
 
         td.info_.push_back(d);

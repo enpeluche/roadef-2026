@@ -22,10 +22,10 @@ struct SRPath
 {
     static constexpr uint8_t MAX_WAYPOINTS = 10;
 
-    const DemandBase *demand;          ///< Métadonnées de la demande (source, target).
-    uint16_t waypoints[MAX_WAYPOINTS]; ///< Waypoints intermédiaires (source et target exclus).
-    uint8_t num_waypoints;             ///< Nombre de waypoints effectivement utilisés.
-    Tick t;                            ///< Time slot du chemin.
+    const DemandBase *demand;        ///< Métadonnées de la demande (source, target).
+    NodeId waypoints[MAX_WAYPOINTS]; ///< Waypoints intermédiaires (source et target exclus).
+    uint8_t num_waypoints;           ///< Nombre de waypoints effectivement utilisés.
+    Tick t;                          ///< Time slot du chemin.
 
     /**
      * @brief Constructeur par défaut. SRPath vide, sans demande associée.
@@ -41,7 +41,7 @@ struct SRPath
      * @param slot  Time slot.
      * @param w     Liste des waypoints (par défaut vide = routage direct source->target).
      */
-    SRPath(const DemandBase *d, Tick slot, const std::vector<uint16_t> &w = {})
+    SRPath(const DemandBase *d, Tick slot, const std::vector<NodeId> &w = {})
         : demand(d), waypoints{}, num_waypoints(0), t(slot)
     {
         num_waypoints = static_cast<uint8_t>(std::min<size_t>(w.size(), MAX_WAYPOINTS));

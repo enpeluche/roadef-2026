@@ -1,3 +1,4 @@
+#include "common/types.hpp"
 #include "graph/algorithm/dijkstra_workspace.hpp"
 #include "graph/algorithm/shortest_path_tree.hpp"
 #include "graph/core/graph.hpp"
@@ -12,7 +13,7 @@
  * @param ws Espace de travail réutilisable (évite les réallocations mémoire).
  * @return ShortestPathTree L'arbre résultant contenant distances et prédécesseurs.
  */
-ShortestPathTree Graph::shortest_path_tree(uint16_t source, uint8_t t, DijkstraWorkspace &ws) const
+ShortestPathTree Graph::shortest_path_tree(uint16_t source, Tick t, DijkstraWorkspace &ws) const
 {
     assert(frozen_ && "shortest_path_tree requires a frozen graph");
 

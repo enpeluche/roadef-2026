@@ -1,15 +1,23 @@
-// graph/topology/multiflow/CompactFraction.hpp
+// graph/topology/multiflow/compact_fraction.hpp
 
 #pragma once
 #include <cstdint>
 #include <iostream>
 
+/**
+ * @brief Fraction mathématique ultra-compacte stockée sur 1 seul octet (8 bits).
+ * @details Utilise 4 bits pour le numérateur et 4 bits pour le dénominateur.
+ *          La simplification (réduction) est immédiate grâce à une Look-Up Table (LUT).
+ */
 class CompactFraction
 {
 private:
-    uint8_t data; ///< 0-3: numérateur | 4-7: dénominateur
+    uint8_t data; ///< [Bits 0-3]: numérateur | [Bits 4-7]: dénominateur
 
-    // Tableau de simplification
+    /**
+     * @brief Table de hachage matérielle pour simplifier la fraction en O(1).
+     * @details Index = (dénominateur << 4) | numérateur. Valeur = fraction irréductible.
+     */
     static constexpr uint8_t REDUCTION_LUT[256] = {
         0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
         0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
@@ -29,6 +37,11 @@ private:
         0x10, 0xf1, 0xf2, 0x51, 0xf4, 0x31, 0x52, 0xf7, 0xf8, 0x53, 0x32, 0xfb, 0x54, 0xfd, 0xfe, 0x11};
 
 public:
+    /**
+     * @brief Construit et réduit la fraction instantanément via la LUT.
+     * @param n Numérateur (sera masqué sur 4 bits).
+     * @param d Dénominateur (sera masqué sur 4 bits, forcé à 1 si 0).
+     */
     CompactFraction(uint8_t n = 0, uint8_t d = 1)
     {
         uint8_t safe_n = n & 0x0F;
@@ -36,19 +49,31 @@ public:
         data = REDUCTION_LUT[(safe_d << 4) | safe_n];
     }
 
+    /** @brief Renvoie le numérateur (0 à 15). */
     inline uint8_t num() const { return data & 0x0F; }
+
+    /** @brief Renvoie le dénominateur (1 à 15). */
     inline uint8_t den() const { return data >> 4; }
 
+    /** @brief Test d'égalité binaire direct. */
     inline bool operator==(const CompactFraction &other) const
     {
         return data == other.data;
     }
 
+    /**
+     * @brief Applique la fraction à un flux de trafic.
+     * @param total_flow Le volume de trafic à fractionner.
+     * @return double La part du trafic correspondant à la fraction.
+     */
     inline double apply(double total_flow) const
     {
         return (total_flow * (data & 0x0F)) / (data >> 4);
     }
 
+    /**
+     * @brief Additionne deux fractions (le résultat est auto-réduit).
+     */
     inline CompactFraction operator+(const CompactFraction &other) const
     {
         return CompactFraction(
@@ -56,6 +81,13 @@ public:
             (uint16_t)den() * other.den());
     }
 
+    /**
+     * @brief Vérifie si la fraction vaut exactement 1 (100% du flux).
+     * @details Grâce à la LUT, toute fraction égale à 1 est garantie d'être stockée sous la forme 1/1 (0x11).
+     */
+    inline bool is_one() const { return data == 0x11; }
+
+    /** @brief Affiche la fraction sur la sortie standard. */
     void print() const
     {
         std::cout << (int)num() << "/" << (int)den();

@@ -1,7 +1,6 @@
-// traffic/traffic_io.cpp
-#include <nlohmann/json.hpp>
-#include "traffic_data.hpp"
 #include <fstream>
+#include <nlohmann/json.hpp>
+#include "traffic/traffic_data.hpp"
 
 TrafficData TrafficData::load(const std::string &dataset, const std::string &instance_id)
 {
@@ -13,7 +12,7 @@ TrafficData TrafficData::load(const std::string &dataset, const std::string &ins
         throw std::runtime_error("Erreur ouverture : " + filepath);
 
     auto data = nlohmann::json::parse(f);
-    td.num_time_slots_ = data.at("num_time_slots").get<uint16_t>();
+    td.num_time_slots_ = data.at("num_time_slots").get<TickCount>();
 
     const auto &json_demands = data.at("demands");
 
@@ -45,43 +44,28 @@ TrafficData TrafficData::load(const std::string &dataset, const std::string &ins
 
 std::ostream &operator<<(std::ostream &os, const TrafficData &td)
 {
-    os << "========== TRAFFIC DATA SUMMARY ==========\n";
-    os << " Demands     : " << td.demands_count() << "\n";
-    os << " Time slots  : " << td.slots_count() << "\n\n";
+    constexpr uint16_t DEFAULT_LIMIT = 5;
 
-    // En-tête du tableau Markdown
-    os << "| DEMAND_ID | SOURCE | DESTINATION | VOLUMES\n";
-    os << "|-----------|--------|-------------|--------\n";
+    const uint16_t n_demands = td.demands_count();
+    const TickCount n_slots = td.slots_count();
+    const uint16_t limit = std::min(DEFAULT_LIMIT, n_demands);
 
-    // On limite l'affichage aux 10 premières demandes
-    uint16_t demands_limit = std::min<uint16_t>(10, td.demands_count());
+    os << "Traffic: " << n_demands << " demands, " << n_slots << " slots\n\n";
 
-    // On limite l'affichage des volumes pour ne pas casser l'écran
-    uint16_t slots_limit = std::min<uint16_t>(7, td.slots_count());
+    os << "| ID | SRC | TGT | VOLS\n";
+    os << "|----|-----|-----|-----\n";
 
-    for (uint16_t i = 0; i < demands_limit; ++i)
+    for (uint16_t i = 0; i < limit; ++i)
     {
-        const auto &demand = td.get_info(i);
-
-        os << "| " << std::setw(9) << demand.id
-           << " | " << std::setw(6) << demand.source
-           << " | " << std::setw(11) << demand.target
-           << " | [";
-
-        // Affichage des volumes
-        for (uint16_t t = 0; t < slots_limit; ++t)
-            os << td.volume(i, t) << (t == slots_limit - 1 ? "" : ", ");
-
-        // Si on a tronqué les time slots, on l'indique
-        if (td.slots_count() > slots_limit)
-            os << ", ... (" << td.slots_count() - slots_limit << " more)";
-
+        const auto &d = td.get_info(i);
+        os << "| " << d.id << " | " << d.source << " | " << d.target << " | [";
+        for (Tick t = 0; t < n_slots; ++t)
+            os << td.volume(i, t) << (t + 1 < n_slots ? ", " : "");
         os << "]\n";
     }
 
-    // Si on a tronqué les demandes, on l'indique
-    if (td.demands_count() > demands_limit)
-        os << "| ...       | ...    | ...         | ...\n";
+    if (n_demands > limit)
+        os << "| ... (" << (n_demands - limit) << " more)\n";
 
     return os;
 }

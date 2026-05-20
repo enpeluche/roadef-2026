@@ -2,9 +2,9 @@
 
 #pragma once
 
+#include <iostream>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
 
 namespace EdgeConsts
 {

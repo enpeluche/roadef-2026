@@ -1,101 +1,91 @@
-// graph/core/graph.cpp
-// clang-format off
+#include "graph/core/graph.hpp"
 
-#include "graph.hpp"
-
-/**
- * @brief Calcul la capacité entrante d'un noeud.
- * 
- * @param node_id Identifiant du noeud.
- */
-double Graph::node_ingress_cap(uint16_t node_id) const
+Graph Graph::compacted(const boost::dynamic_bitset<> &keep_node,
+                       const boost::dynamic_bitset<> &keep_edge,
+                       std::vector<uint16_t> &node_map,
+                       std::vector<uint16_t> &edge_map,
+                       const std::vector<double> &edge_new_capacity) const
 {
-    const std::vector<uint16_t> &in = incoming_edges_ids(node_id);
+    assert(frozen_ && "compacted() called on unfrozen graph");
+    constexpr uint16_t REMOVED = std::numeric_limits<uint16_t>::max();
+    const uint16_t num_nodes = nodes_count();
+    const uint16_t num_edges = edges_count();
 
-    double sum = 0;
+    assert(keep_node.size() == num_nodes && "keep_node size mismatch");
+    assert(keep_edge.size() == num_edges && "keep_edge size mismatch");
 
-    for (uint16_t id : in) sum += edge(id).capacity;
-
-    return sum;
-}
-/**
- * @brief Calcul la capacité sortante d'un noeud.
- * 
- * @param node_id Identifiant du noeud.
- */
-double Graph::node_egress_cap(uint16_t node_id) const
-{
-    const std::vector<uint16_t> &out = outgoing_ids(node_id);
-
-    double sum = 0;
-
-    for (uint16_t id : out) sum += edge(id).capacity;
-
-    return sum;
-}
-/**
- * @brief  Calcul la capacité totale du graphe.
- * 
- */
-double Graph::total_cap() const
-{
-    double total_capacity = 0;
-
-    for (const auto &edge : all_edges_) total_capacity += edge.capacity;
-
-    return total_capacity;
-}
-/**
- * @brief Calcul la pression d'un noeud.
- * 
- * @param node_id Identifiant du noeud.
- */
-double Graph::node_pressure_index(uint16_t node_id) const
-{
-    double in = node_ingress_cap(node_id);
-    double out = node_egress_cap(node_id);
-
-    if (out == 0) return in;
-
-    return in / out;
-}
-
-/**
- * @brief Retire physiquement les arcs des listes d'adjacence selon un masque.
- * @param to_remove_mask Un bitset où 'true' signifie que l'arc doit être retiré.
- * 
- * @warning 5. filter_edges désynchronise all_edges_.
- * Tu supprimes des entrées dans in_edges_/out_edges_ mais all_edges_ garde tout.
- * Du coup edges_count() ment, total_cap() compte les arcs morts, et tout code
- * qui itère all_edges_ voit des fantômes. Soit tu documentes clairement
- * « all_edges_ est l'arène, on n'y touche jamais, source de vérité = adjacences + bitset »,
- * soit tu compactes vraiment (mais alors faut reremapper les IDs partout — coûteux).
- */
-void Graph::filter_edges(const boost::dynamic_bitset<>& to_remove_mask) {
-    if (to_remove_mask.none()) return;
-
-    for (uint16_t i = 0; i < node_count_; ++i) {
-        // Filtrage des arcs sortants
-        auto& out = out_edges_[i];
-        out.erase(std::remove_if(out.begin(), out.end(), [&](uint16_t id) {
-            return to_remove_mask.test(id);
-        }), out.end());
-
-        // Filtrage des arcs entrants
-        auto& in = in_edges_[i];
-        in.erase(std::remove_if(in.begin(), in.end(), [&](uint16_t id) {
-            return to_remove_mask.test(id);
-        }), in.end());
+    // 1. Remap nœuds (O(n))
+    node_map.assign(num_nodes, REMOVED);
+    uint16_t next_node_id = 0;
+    for (size_t v = keep_node.find_first();
+         v != boost::dynamic_bitset<>::npos;
+         v = keep_node.find_next(v))
+    {
+        node_map[v] = next_node_id++;
     }
 
-    // On s'assure que la timeline est synchronisée (un arc filtré est mort pour toujours)
-    for (auto& slot_bits : topology_timeline_) {
-        slot_bits &= ~to_remove_mask;
-    }
-}
+    // 2. Préallocation (popcount sur le bitset, O(m/64))
+    const uint16_t kept_edges_count = static_cast<uint16_t>(keep_edge.count());
 
-uint32_t Graph::active_edges_count() const {
-    uint32_t count = 0;
-    for (const auto& out : out_edges_) count += out.size();
-    return count;
+    // 3. Construction
+    Graph compacted_graph(next_node_id);
+    compacted_graph.all_edges_.reserve(kept_edges_count);
+
+    // Copie des noms (uniquement pour les nœuds gardés)
+    for (size_t v = keep_node.find_first();
+         v != boost::dynamic_bitset<>::npos;
+         v = keep_node.find_next(v))
+    {
+        compacted_graph.node_names_[node_map[v]] = node_names_[v];
+    }
+
+    // 4. Remap arcs (itère uniquement sur les arcs gardés)
+    edge_map.assign(num_edges, REMOVED);
+    for (size_t e = keep_edge.find_first();
+         e != boost::dynamic_bitset<>::npos;
+         e = keep_edge.find_next(e))
+    {
+        const Edge &edge = all_edges_[e];
+
+        if (node_map[edge.source] == REMOVED || node_map[edge.target] == REMOVED)
+            throw std::runtime_error(
+                "compacted: arc " + std::to_string(e) +
+                " gardé avec extrémité supprimée (src=" +
+                std::to_string(edge.source) + ", tgt=" +
+                std::to_string(edge.target) + ")");
+
+        const double new_capacity = edge_new_capacity.empty()
+                                        ? edge.capacity
+                                        : edge_new_capacity[e];
+
+        const uint16_t new_id = compacted_graph.add_edge(
+            node_map[edge.source],
+            node_map[edge.target],
+            edge.weight,
+            new_capacity);
+
+        edge_map[e] = new_id;
+    }
+
+    // 5. Topology timeline (bitwise AND + iteration sur les survivants)
+    compacted_graph.num_time_slots_ = num_time_slots_;
+    compacted_graph.topology_timeline_.assign(
+        num_time_slots_,
+        boost::dynamic_bitset<>(kept_edges_count));
+
+    for (uint8_t t = 0; t < num_time_slots_; ++t)
+    {
+        const auto survivors = topology_timeline_[t] & keep_edge;
+        auto &new_tl = compacted_graph.topology_timeline_[t];
+
+        for (size_t e = survivors.find_first();
+             e != boost::dynamic_bitset<>::npos;
+             e = survivors.find_next(e))
+        {
+            new_tl.set(edge_map[e]);
+        }
+    }
+
+    compacted_graph.freeze();
+    return compacted_graph;
 }

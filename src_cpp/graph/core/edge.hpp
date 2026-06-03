@@ -1,25 +1,29 @@
-// graph/core/edge.hpp
+/**
+ * @file edge.hpp
+ * Usage: #include "graph/core/edge.hpp"
+ */
 
 #pragma once
 
-#include <iostream>
+#include "common/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 
 namespace EdgeConsts
 {
     /**
-     * Facteur de conversion double→uint64 pour les poids.
+     * Facteur de conversion double→Weight pour les poids.
      * Choisi pour conserver 8 chiffres significatifs.
      */
-    constexpr uint64_t WEIGHT_SCALE = 100'000'000ULL; // 1e8
+    constexpr Weight WEIGHT_SCALE = 100'000'000ULL; // 1e8
 
-    inline uint64_t to_int(double w)
+    inline Weight to_int(double w)
     {
-        return static_cast<uint64_t>(std::round(w * WEIGHT_SCALE));
+        return static_cast<Weight>(std::round(w * WEIGHT_SCALE));
     }
 
-    inline double to_double(uint64_t w)
+    inline double to_double(Weight w)
     {
         return static_cast<double>(w) / static_cast<double>(WEIGHT_SCALE);
     }
@@ -32,21 +36,9 @@ namespace EdgeConsts
  */
 struct Edge
 {
-    uint16_t id;     ///< Identifiant unique de l'arc.
-    uint16_t source; ///< Identifiant du noeud source.
-    uint16_t target; ///< Identifiant du noeud destination.
-    uint64_t weight; ///< Poids de l'arc, utilisé pour les PCC.
-    double capacity; ///< Capacité de l'arc.
-
-    /**
-     * @brief Surcharge l'opérateur d'affichage pour la structure Edge.
-     */
-    friend std::ostream &operator<<(std::ostream &os, const Edge &edge)
-    {
-        os << "Edge(" << edge.id << ", "
-           << edge.source << "->" << edge.target
-           << ", [w=" << edge.weight << ", c=" << edge.capacity << "])";
-
-        return os;
-    }
+    EdgeId id;         ///< Identifiant unique de l'arc.
+    NodeId source;     ///< Identifiant du noeud source.
+    NodeId target;     ///< Identifiant du noeud destination.
+    Weight weight;     ///< Poids de l'arc, utilisé pour les PCC.
+    Capacity capacity; ///< Capacité de l'arc.
 };

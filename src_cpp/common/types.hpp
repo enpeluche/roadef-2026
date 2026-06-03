@@ -39,3 +39,14 @@ using EdgeId = uint16_t;
  * @brief Représente le nombre total d'arcs présents dans le graphe.
  */
 using EdgeCount = uint16_t;
+
+/**
+ * @brief Représente le coût/poids d'un arc.
+ * Utilisé pour le calcul des plus courts chemins (PCC).
+ */
+using Weight = uint64_t;
+
+/**
+ * @brief Représente la capacité de trafic d'un arc.
+ */
+using Capacity = double;

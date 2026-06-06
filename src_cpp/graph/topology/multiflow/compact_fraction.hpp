@@ -1,6 +1,10 @@
-// graph/topology/multiflow/compact_fraction.hpp
+/**
+ * @file compact_fraction.hpp
+ * Usage: #include "graph/topology/multiflow/compact_fraction.hpp"
+ */
 
 #pragma once
+
 #include <cstdint>
 #include <iostream>
 
@@ -86,10 +90,4 @@ public:
      * @details Grâce à la LUT, toute fraction égale à 1 est garantie d'être stockée sous la forme 1/1 (0x11).
      */
     inline bool is_one() const { return data == 0x11; }
-
-    /** @brief Affiche la fraction sur la sortie standard. */
-    void print() const
-    {
-        std::cout << (int)num() << "/" << (int)den();
-    }
 };

@@ -1,6 +1,8 @@
 /**
  * @file edge.hpp
  * Usage: #include "graph/core/edge.hpp"
+ *
+ * @todo weight -> metric
  */
 
 #pragma once

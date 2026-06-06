@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 /**
  * @brief Identifiant discret d'un pas de temps.
@@ -25,6 +26,11 @@ using TickCount = uint8_t;
 using NodeId = uint16_t;
 
 /**
+ * @brief Nœud inexistant ou invalide.
+ */
+constexpr NodeId INVALID_NODE = std::numeric_limits<NodeId>::max();
+
+/**
  * @brief Représente le nombre total de nœuds présents dans le graphe.
  */
 using NodeCount = uint16_t;
@@ -34,6 +40,11 @@ using NodeCount = uint16_t;
  * Les instances ne dépassent pas 2 000 arcs.
  */
 using EdgeId = uint16_t;
+
+/**
+ * @brief Arc inexistant ou invalide.
+ */
+constexpr EdgeId INVALID_EDGE = std::numeric_limits<EdgeId>::max();
 
 /**
  * @brief Représente le nombre total d'arcs présents dans le graphe.

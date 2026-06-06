@@ -1,91 +1,152 @@
+/**
+ * @file graph.cpp
+ */
+
+#include "graph/algorithm/shortest_path_tree.hpp"
 #include "graph/core/graph.hpp"
 
-Graph Graph::compacted(const boost::dynamic_bitset<> &keep_node,
-                       const boost::dynamic_bitset<> &keep_edge,
-                       std::vector<uint16_t> &node_map,
-                       std::vector<uint16_t> &edge_map,
-                       const std::vector<double> &edge_new_capacity) const
+/**
+ * @param kept_edges Masque binaire indiquant les arêtes à conserver (1 pour garder, 0 pour supprimer).
+ * @param edge_mapping Vecteur de sortie contenant la correspondance entre les anciens et les nouveaux indices des arêtes.
+ */
+Graph Graph::remove_edges(const boost::dynamic_bitset<> &kept_edges, std::vector<EdgeId> &edge_mapping) const
 {
-    assert(frozen_ && "compacted() called on unfrozen graph");
-    constexpr uint16_t REMOVED = std::numeric_limits<uint16_t>::max();
-    const uint16_t num_nodes = nodes_count();
-    const uint16_t num_edges = edges_count();
 
-    assert(keep_node.size() == num_nodes && "keep_node size mismatch");
-    assert(keep_edge.size() == num_edges && "keep_edge size mismatch");
+    assert(frozen_ && "remove_edges() called on unfrozen graph");
+    assert(kept_edges.size() == edges_count() && "Precondition failed: kept_edges bitset length must equal the total edge count.");
 
-    // 1. Remap nœuds (O(n))
-    node_map.assign(num_nodes, REMOVED);
-    uint16_t next_node_id = 0;
-    for (size_t v = keep_node.find_first();
-         v != boost::dynamic_bitset<>::npos;
-         v = keep_node.find_next(v))
-    {
-        node_map[v] = next_node_id++;
-    }
+    const NodeCount sub_nodes_count = nodes_count();
+    const EdgeCount sub_edge_count = static_cast<EdgeCount>(kept_edges.count());
 
-    // 2. Préallocation (popcount sur le bitset, O(m/64))
-    const uint16_t kept_edges_count = static_cast<uint16_t>(keep_edge.count());
+    Graph subgraph(sub_nodes_count);
 
-    // 3. Construction
-    Graph compacted_graph(next_node_id);
-    compacted_graph.all_edges_.reserve(kept_edges_count);
+    subgraph.node_names_ = node_names_;
 
-    // Copie des noms (uniquement pour les nœuds gardés)
-    for (size_t v = keep_node.find_first();
-         v != boost::dynamic_bitset<>::npos;
-         v = keep_node.find_next(v))
-    {
-        compacted_graph.node_names_[node_map[v]] = node_names_[v];
-    }
+    subgraph.all_edges_.reserve(sub_edge_count);
 
-    // 4. Remap arcs (itère uniquement sur les arcs gardés)
-    edge_map.assign(num_edges, REMOVED);
-    for (size_t e = keep_edge.find_first();
-         e != boost::dynamic_bitset<>::npos;
-         e = keep_edge.find_next(e))
+    edge_mapping.assign(edges_count(), INVALID_EDGE);
+
+    for (size_t e = kept_edges.find_first(); e != boost::dynamic_bitset<>::npos; e = kept_edges.find_next(e))
     {
         const Edge &edge = all_edges_[e];
 
-        if (node_map[edge.source] == REMOVED || node_map[edge.target] == REMOVED)
-            throw std::runtime_error(
-                "compacted: arc " + std::to_string(e) +
-                " gardé avec extrémité supprimée (src=" +
-                std::to_string(edge.source) + ", tgt=" +
-                std::to_string(edge.target) + ")");
+        const EdgeId id = subgraph.add_edge(edge.source, edge.target, edge.weight, edge.capacity);
 
-        const double new_capacity = edge_new_capacity.empty()
-                                        ? edge.capacity
-                                        : edge_new_capacity[e];
-
-        const uint16_t new_id = compacted_graph.add_edge(
-            node_map[edge.source],
-            node_map[edge.target],
-            edge.weight,
-            new_capacity);
-
-        edge_map[e] = new_id;
+        edge_mapping[e] = id;
     }
 
-    // 5. Topology timeline (bitwise AND + iteration sur les survivants)
-    compacted_graph.num_time_slots_ = num_time_slots_;
-    compacted_graph.topology_timeline_.assign(
-        num_time_slots_,
-        boost::dynamic_bitset<>(kept_edges_count));
+    subgraph.freeze();
+    return subgraph;
+}
 
-    for (uint8_t t = 0; t < num_time_slots_; ++t)
+/**
+ * @param kept_nodes Masque binaire indiquant les nœuds à conserver (1 pour garder, 0 pour supprimer).
+ * @param node_mapping Vecteur de sortie contenant la correspondance entre les anciens et les nouveaux indices des nœuds.
+ * @param edge_mapping Vecteur de sortie contenant la correspondance entre les anciens et les nouveaux indices des arêtes.
+ */
+Graph Graph::remove_nodes(const boost::dynamic_bitset<> &kept_nodes, std::vector<NodeId> &node_mapping, std::vector<EdgeId> &edge_mapping) const
+{
+    assert(frozen_ && "remove_nodes() called on unfrozen graph");
+    assert(kept_nodes.size() == nodes_count() && "Precondition failed: kept_nodes bitset length must equal the total node count.");
+
+    const NodeCount sub_nodes_count = static_cast<NodeCount>(kept_nodes.count());
+
+    node_mapping.assign(nodes_count(), INVALID_NODE);
+
+    Graph subgraph(sub_nodes_count);
+
+    NodeId node_id = 0;
+
+    for (size_t v = kept_nodes.find_first(); v != boost::dynamic_bitset<>::npos; v = kept_nodes.find_next(v))
     {
-        const auto survivors = topology_timeline_[t] & keep_edge;
-        auto &new_tl = compacted_graph.topology_timeline_[t];
-
-        for (size_t e = survivors.find_first();
-             e != boost::dynamic_bitset<>::npos;
-             e = survivors.find_next(e))
-        {
-            new_tl.set(edge_map[e]);
-        }
+        node_mapping[v] = node_id++;
+        subgraph.node_names_[node_mapping[v]] = node_names_[v];
     }
 
-    compacted_graph.freeze();
-    return compacted_graph;
+    edge_mapping.assign(edges_count(), INVALID_EDGE);
+
+    for (size_t e = 0; e < edges_count(); e++)
+    {
+        const Edge &edge = all_edges_[e];
+
+        if (node_mapping[edge.source] == INVALID_NODE || node_mapping[edge.target] == INVALID_NODE)
+            continue;
+
+        const EdgeId edge_id = subgraph.add_edge(node_mapping[edge.source], node_mapping[edge.target], edge.weight, edge.capacity);
+
+        edge_mapping[e] = edge_id;
+    }
+
+    subgraph.freeze();
+    return subgraph;
+}
+
+/**
+ * @brief Construit une structure CSR (Compressed Sparse Row) à partir de listes d'adjacence.
+ * @details Cette fonction effectue la conversion en deux étapes :
+ * 1. Elle trie chaque sous-liste d'adjacence selon la fonction de clé fournie.
+ * 2. Elle calcule les indices de décalage (offsets) et aplatit les listes triées dans un vecteur contigu.
+ * @tparam KeyFn Type de la fonction ou de la lambda utilisée pour évaluer la clé de tri des arêtes.
+ * @param adj Liste d'adjacence d'entrée (vecteur de vecteurs contenant les identifiants des arêtes).
+ * \warning Ce paramètre est modifié par la fonction : les sous-listes sont triées de manière permanente.
+ * @param key Fonction/lambda prenant un identifiant d'arête (`uint16_t`) et retournant la valeur de tri (ex: le nœud cible ou source).
+ * @param offsets Vecteur de sortie qui contiendra les indices de début des arêtes pour chaque nœud.
+ * @param edge_ids Vecteur de sortie qui contiendra l'ensemble des identifiants d'arêtes stockés de façon contiguë.
+ */
+template <class KeyFn>
+void Graph::build_csr(std::vector<std::vector<EdgeId>> &adj, KeyFn key,
+                      std::vector<EdgeCount> &offsets, std::vector<EdgeId> &edge_ids)
+{
+    const NodeCount n = static_cast<NodeCount>(adj.size());
+
+    // --- 1. Tri sur place des listes d'adjacence
+
+    for (auto &lst : adj)
+        std::sort(lst.begin(), lst.end(), [&](EdgeId a, EdgeId b)
+                  { return key(a) < key(b); });
+
+    // --- 2. Calcul des offsets
+
+    offsets.resize(n + 1);
+    EdgeCount total = 0;
+
+    for (NodeId u = 0; u < n; ++u)
+    {
+        offsets[u] = total;
+        total += adj[u].size();
+    }
+    offsets[n] = total;
+
+    // --- 3. Aplatissement dans le vecteur final contigu
+
+    edge_ids.reserve(total);
+    for (const auto &lst : adj)
+        edge_ids.insert(edge_ids.end(), lst.begin(), lst.end());
+}
+
+/**
+ * @brief Convertit les listes d'adjacence en format CSR.
+ * À appeler après que tous les arcs aient été ajoutés.
+ * Libère la mémoire des build_*_edges_.
+ */
+void Graph::freeze()
+{
+    if (frozen_)
+        return;
+
+    // --- 1. Construction des CSR entrants et sortants
+    build_csr(build_out_edges_, [&](EdgeId e)
+              { return all_edges_[e].target; }, out_offsets_, out_edge_ids_);
+
+    build_csr(build_in_edges_, [&](EdgeId e)
+              { return all_edges_[e].source; }, in_offsets_, in_edge_ids_);
+
+    // --- 2. Libération de la mémoire de construction
+    build_out_edges_.clear();
+    build_out_edges_.shrink_to_fit();
+
+    build_in_edges_.clear();
+    build_in_edges_.shrink_to_fit();
+
+    frozen_ = true;
 }

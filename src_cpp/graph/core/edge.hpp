@@ -10,7 +10,6 @@
 #include "common/types.hpp"
 
 #include <cmath>
-#include <cstdint>
 
 namespace EdgeConsts
 {

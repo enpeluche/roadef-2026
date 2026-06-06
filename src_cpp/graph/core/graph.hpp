@@ -210,7 +210,7 @@ public:
 
     // SPT (Dijkstra)
 
-    ShortestPathTree shortest_path_tree(NodeId source, Tick t, DijkstraWorkspace &ws) const;
+    ShortestPathTree shortest_path_tree(NodeId source, Tick t, DijkstraWorkspace &ws, const boost::dynamic_bitset<> &timeline) const;
 
     // Compactage (utilisé par kernelize)
 

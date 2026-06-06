@@ -1,9 +1,15 @@
 // #include "graph/algorithm/dijkstra_workspace.hpp"
-
+/**
+ * @file edge.hpp
+ * Usage: #include "graph/core/edge.hpp"
+ *
+ * @todo weight -> metric
+ */
 #pragma once
 
+#include "common/types.hpp"
+
 #include <boost/container/small_vector.hpp>
-#include <cstdint>
 #include <limits>
 #include <queue>
 #include <vector>
@@ -24,18 +30,18 @@ public:
 
 struct DijkstraWorkspace
 {
-    static constexpr uint64_t MAX = std::numeric_limits<uint64_t>::max();
+    static constexpr Weight MAX = std::numeric_limits<Weight>::max();
 
-    using Element = std::pair<uint64_t, uint16_t>; // étiquette poids - ID
+    using Element = std::pair<Weight, NodeId>; // étiquette poids - ID
 
-    std::vector<uint64_t> distances;                                           ///< Distances minimales trouvées depuis la source vers chaque nœud.
-    std::vector<boost::container::small_vector<uint16_t, 4>> tmp_predecessors; ///< IDs des arcs prédécesseurs pour chaque nœud (gère le multi-path ECMP).
-    ReusablePQ<Element> pq;                                                    ///< File de priorité (Min-Heap) pour explorer le nœud le plus proche.
+    std::vector<Weight> distances;                                           ///< Distances minimales trouvées depuis la source vers chaque nœud.
+    std::vector<boost::container::small_vector<EdgeId, 4>> tmp_predecessors; ///< IDs des arcs prédécesseurs pour chaque nœud (gère le multi-path ECMP).
+    ReusablePQ<Element> pq;                                                  ///< File de priorité (Min-Heap) pour explorer le nœud le plus proche.
 
     /**
      * @param n Le nombre de noeuds.
      */
-    void init(uint16_t n)
+    void init(NodeCount n)
     {
         distances.resize(n);
         tmp_predecessors.resize(n);
@@ -45,7 +51,7 @@ struct DijkstraWorkspace
      * @warning toujours appeler prepare après init
      * @param n Le nombre de noeuds.
      */
-    void prepare(uint16_t n)
+    void prepare(NodeCount n)
     {
         distances.assign(n, MAX);
 

@@ -1,4 +1,7 @@
-// #include "traffic/traffic_data.hpp"
+/**
+ * @file traffic_data.hpp
+ * Usage: #include "traffic/traffic_data.hpp"
+ */
 
 #pragma once
 
@@ -9,90 +12,58 @@
 #include <string>
 
 /**
- * @brief Contient l'ensemble des demandes de trafic d'une instance.
- *
- * Stocke les métadonnées des demandes (source, target, norme) et leurs volumes
- * sur chaque time slot. Les volumes sont aplatis en row-major (demand-major)
- * pour garantir la contiguïté mémoire des volumes d'une même demande.
- *
- * @note Layout mémoire : all_volumes_[demand_id * num_time_slots_ + t]
+ * @brief Read-only container for network traffic demands and their time-series volumes.
+ * * Invariant: all_volumes_.size() == info_.size() * num_time_slots_
  */
 class TrafficData
 {
 public:
     /**
-     * @brief Construit un TrafficData à partir de demandes et de volumes pré-calculés.
-     *
-     * @param num_slots Nombre de time slots de l'instance.
-     * @param demands   Vecteur des métadonnées de demandes (taille = n_demands).
-     * @param volumes   Vecteur aplati des volumes (taille = n_demands * num_slots).
-     *
-     * @note Le constructeur appelle compute_all_norms_() pour remplir le champ n2
-     *       de chaque DemandBase.
+     * @brief Initializes traffic data and precomputes L2 norms.
+     * @pre volumes.size() must equal demands.size() * num_slots.
      */
     TrafficData(TickCount num_slots,
                 const std::vector<DemandBase> &demands,
                 const std::vector<double> &volumes);
 
-    /**
-     * @brief Constructeur par défaut. Crée un TrafficData vide.
-     */
     TrafficData() = default;
 
-    /**
-     * @brief Renvoie le nombre de demandes.
-     */
     uint16_t demands_count() const { return static_cast<uint16_t>(info_.size()); }
 
-    /**
-     * @brief Renvoie le nombre de time slots de l'instance.
-     */
     TickCount slots_count() const { return num_time_slots_; }
 
     /**
-     * @brief Renvoie le volume d'une demande à un time slot donné.
-     *
-     * @param demand_id Identifiant de la demande.
-     * @param t         Time slot considéré.
-     * @return Volume de la demande au slot t.
+     * @pre demand_id < demands_count()
+     * @pre t < slots_count()
      */
-    double volume(uint16_t demand_id, Tick t) const
+    double volume(DemandId id, Tick t) const
     {
-        return all_volumes_[demand_id * num_time_slots_ + t];
+        return all_volumes_[id * num_time_slots_ + t];
     }
 
     /**
-     * @brief Renvoie les métadonnées statiques d'une demande (source, target, norme).
-     *
-     * @param demand_id Identifiant de la demande.
+     * @pre demand_id < demands_count()
      */
-    const DemandBase &get_info(uint16_t demand_id) const { return info_[demand_id]; }
+    const DemandBase &get_info(DemandId id) const { return info_[id]; }
 
     /**
-     * @brief Charge un TrafficData depuis le fichier JSON d'une instance.
-     *
-     * Va lire `instances/<dataset>/<dataset>-<instance_id>-tm.json`.
-     *
-     * @param dataset      Nom du dataset (par exemple "setA").
-     * @param instance_id  Identifiant de l'instance (par exemple "07").
-     * @throws std::runtime_error Si le fichier ne peut pas être ouvert.
+     * @brief Constructs TrafficData by reading a JSON instance file.
+     * @param dataset Directory name inside the "instances/" relative path.
+     * @param instance_id Identifier used to form the "-tm.json" filename.
+     * @throws std::runtime_error if the file cannot be opened.
+     * @throws nlohmann::json::exception on JSON parsing or schema validation errors.
      */
     static TrafficData load(const std::string &dataset, const std::string &instance_id);
 
-    /**
-     * @brief Surcharge l'affichage du TrafficData (tableau Markdown des 5 premières demandes).
-     */
     friend std::ostream &operator<<(std::ostream &os, const TrafficData &td);
 
 private:
-    std::vector<DemandBase> info_;    ///< Métadonnées des demandes (n_demands éléments).
-    std::vector<double> all_volumes_; ///< Volumes aplatis row-major (n_demands * num_time_slots_).
-    TickCount num_time_slots_;        ///< Nombre de time slots.
+    std::vector<DemandBase> info_;
+    std::vector<Capacity> all_volumes_; ///< Flattened 2D array [demand_id][time_slot].
+    TickCount num_time_slots_;
 
     /**
-     * @brief Calcule la norme L2 des volumes pour chaque demande et la stocke dans info_[i].n2.
-     *
-     * Appelée automatiquement par le constructeur et par load().
+     * @brief Computes and stores the L2 norm for each demand in info_.
      */
     void compute_all_norms_();
 };

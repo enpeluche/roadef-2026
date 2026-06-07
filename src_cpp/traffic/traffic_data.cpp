@@ -1,3 +1,7 @@
+/**
+ * @file traffic_data.cpp
+ */
+
 #include "common/types.hpp"
 #include "traffic/traffic_data.hpp"
 
@@ -6,7 +10,7 @@
 
 TrafficData::TrafficData(TickCount num_slots,
                          const std::vector<DemandBase> &demands,
-                         const std::vector<double> &volumes)
+                         const std::vector<Capacity> &volumes)
     : info_(demands),
       all_volumes_(volumes),
       num_time_slots_(num_slots)
@@ -14,15 +18,12 @@ TrafficData::TrafficData(TickCount num_slots,
     compute_all_norms_();
 }
 
-/**
- * Calcule la norme 2 de chaque demandes.
- */
 void TrafficData::compute_all_norms_()
 {
-    uint16_t n = info_.size();
+    DemandCount n = info_.size();
 #pragma omp parallel for schedule(static)
 
-    for (uint16_t i = 0; i < n; ++i)
+    for (DemandId i = 0; i < n; ++i)
     {
         double sum_sq = 0;
         size_t offset = i * num_time_slots_;

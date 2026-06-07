@@ -1,4 +1,4 @@
-// #include "graph/topology/multiflow/mf_workspace.hpp"
+// #include "graph/topology/mf_workspace.hpp"
 
 #pragma once
 
@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "common/types.hpp"
-#include "graph/topology/multiflow/compact_fraction.hpp"
+#include "graph/topology/compact_fraction.hpp"
 
 /**
  * @brief Buffers réutilisables pour le calcul des flux multiples (MultiFlow).

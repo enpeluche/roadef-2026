@@ -1,9 +1,9 @@
-// graph/topology/multiflow/multiflow.cpp
+// graph/topology/multiflow.cpp
 
-#include "graph/topology/multiflow/multiflow.hpp"
+#include "graph/topology/multiflow.hpp"
 #include "graph/core/graph.hpp"
 #include "graph/algorithm/shortest_path_tree.hpp"
-#include "graph/topology/multiflow/mf_workspace.hpp"
+#include "graph/topology/mf_workspace.hpp"
 #include <algorithm>
 #include <iomanip>
 

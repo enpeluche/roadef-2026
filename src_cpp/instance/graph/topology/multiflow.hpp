@@ -1,12 +1,12 @@
 /**
  * @file multiflow.hpp
- * Usage: #include "graph/topology/multiflow/multiflow.hpp"
+ * Usage: #include "graph/topology/multiflow.hpp"
  */
 
 #pragma once
 
 #include "common/types.hpp"
-#include "graph/topology/multiflow/compact_fraction.hpp"
+#include "graph/topology/compact_fraction.hpp"
 
 #include <boost/dynamic_bitset.hpp>
 #include <iostream>

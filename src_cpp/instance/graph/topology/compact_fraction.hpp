@@ -1,6 +1,6 @@
 /**
  * @file compact_fraction.hpp
- * Usage: #include "instance/graph/topology/multiflow/compact_fraction.hpp"
+ * Usage: #include "instance/graph/topology/compact_fraction.hpp"
  */
 
 #pragma once

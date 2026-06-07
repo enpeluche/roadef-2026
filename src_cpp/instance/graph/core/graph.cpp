@@ -2,8 +2,8 @@
  * @file graph.cpp
  */
 
-#include "graph/algorithm/shortest_path_tree.hpp"
-#include "graph/core/graph.hpp"
+#include "instance/graph/algorithm/shortest_path_tree.hpp"
+#include "instance/graph/core/graph.hpp"
 
 /**
  * @param kept_edges Masque binaire indiquant les arêtes à conserver (1 pour garder, 0 pour supprimer).

@@ -1,10 +1,8 @@
-// #include "graph/algorithm/dijkstra_workspace.hpp"
 /**
- * @file edge.hpp
- * Usage: #include "graph/core/edge.hpp"
- *
- * @todo weight -> metric
+ * @file dijkstra_workspace.hpp
+ * Usage: #include "instance/graph/algorithm/dijkstra_workspace.hpp"
  */
+
 #pragma once
 
 #include "common/types.hpp"

@@ -1,12 +1,12 @@
 /**
  * @file graph.hpp
- * Usage: #include "graph/core/graph.hpp"
+ * Usage: #include "instance/graph/core/graph.hpp"
  */
 
 #pragma once
 
 #include "common/types.hpp"
-#include "graph/core/edge.hpp"
+#include "instance/graph/core/edge.hpp"
 
 #include <algorithm>
 #include <boost/dynamic_bitset.hpp>

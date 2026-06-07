@@ -1,6 +1,6 @@
 /**
  * @file shortest_path_tree.hpp
- * Usage: #include "graph/algorithm/shortest_path_tree.hpp"
+ * Usage: #include "instancce/graph/algorithm/shortest_path_tree.hpp"
  *
  * @todo add leaf, early cut
  */

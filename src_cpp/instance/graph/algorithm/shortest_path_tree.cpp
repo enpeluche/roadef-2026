@@ -1,12 +1,11 @@
 /**
  * @file shortest_path_tree.cpp
- *
  */
 
 #include "common/types.hpp"
-#include "graph/algorithm/dijkstra_workspace.hpp"
-#include "graph/algorithm/shortest_path_tree.hpp"
-#include "graph/core/graph.hpp"
+#include "instance/graph/algorithm/dijkstra_workspace.hpp"
+#include "instance/graph/algorithm/shortest_path_tree.hpp"
+#include "instance/graph/core/graph.hpp"
 
 #include <iomanip>
 

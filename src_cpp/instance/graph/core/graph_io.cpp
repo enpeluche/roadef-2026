@@ -4,8 +4,8 @@
  * @todo nlohmann -> simdjson
  */
 
-#include "graph/core/edge.hpp"
-#include "graph/core/graph.hpp"
+#include "instance/graph/core/edge.hpp"
+#include "instance/graph/core/graph.hpp"
 
 #include <fstream>
 #include <nlohmann/json.hpp>

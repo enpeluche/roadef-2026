@@ -1,6 +1,6 @@
 /**
  * @file types.hpp
- * @brief Définitions des types primitifs.
+ * @brief Primitive type aliases and sentinel values.
  * Usage: #include "common/types.hpp"
  */
 #pragma once
@@ -9,55 +9,61 @@
 #include <limits>
 
 /**
- * @brief Identifiant discret d'un pas de temps.
- * Les instances ne dépassent pas 2 ticks.
+ * @brief Discrete time step identifier (guaranteed <= 2).
  */
 using Tick = uint8_t;
 
 /**
- * @brief L'unité du temps.
+ * @brief Total number of time steps.
  */
 using TickCount = uint8_t;
 
 /**
- * @brief Identifiant unique d'un nœud.
- * Les instances ne dépassent pas 400 noeuds.
+ * @brief Unique node identifier (guaranteed <= 400).
  */
 using NodeId = uint16_t;
 
 /**
- * @brief Nœud inexistant ou invalide.
+ * @brief Sentinel value indicating an unassigned or nonexistent node.
  */
 constexpr NodeId INVALID_NODE = std::numeric_limits<NodeId>::max();
 
 /**
- * @brief Représente le nombre total de nœuds présents dans le graphe.
+ * @brief Total number of nodes in the graph.
  */
 using NodeCount = uint16_t;
 
 /**
- * @brief Identifiant unique d'un arc.
- * Les instances ne dépassent pas 2 000 arcs.
+ * @brief Unique edge identifier (guaranteed <= 2000).
  */
 using EdgeId = uint16_t;
 
 /**
- * @brief Arc inexistant ou invalide.
+ * @brief Sentinel value indicating an unassigned or nonexistent edge.
  */
 constexpr EdgeId INVALID_EDGE = std::numeric_limits<EdgeId>::max();
 
 /**
- * @brief Représente le nombre total d'arcs présents dans le graphe.
+ * @brief Total number of edges in the graph.
  */
 using EdgeCount = uint16_t;
 
 /**
- * @brief Représente le coût/poids d'un arc.
- * Utilisé pour le calcul des plus courts chemins (PCC).
+ * @brief Edge cost metric for shortest path calculations.
  */
 using Weight = uint64_t;
 
 /**
- * @brief Représente la capacité de trafic d'un arc.
+ * @brief Edge traffic capacity limit.
  */
 using Capacity = double;
+
+/**
+ * @brief Unique identifier for a traffic demand.
+ */
+using DemandId = uint16_t;
+
+/**
+ * @brief Total number of traffic demands.
+ */
+using DemandCount = uint16_t;

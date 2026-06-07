@@ -1,12 +1,12 @@
 /**
  * @file traffic_data.hpp
- * Usage: #include "traffic/traffic_data.hpp"
+ * Usage: #include "instance/traffic/traffic_data.hpp"
  */
 
 #pragma once
 
 #include "common/types.hpp"
-#include "traffic/demand_base.hpp"
+#include "instance/traffic/demand_base.hpp"
 
 #include <vector>
 #include <string>

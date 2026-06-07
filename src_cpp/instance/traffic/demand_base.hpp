@@ -1,6 +1,6 @@
 /**
  * @file demand_base.hpp
- * Usage: #include "traffic/demand_base.hpp"
+ * Usage: #include "instance/traffic/demand_base.hpp"
  */
 
 #pragma once

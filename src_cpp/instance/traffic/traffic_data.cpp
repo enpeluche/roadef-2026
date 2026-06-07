@@ -3,7 +3,7 @@
  */
 
 #include "common/types.hpp"
-#include "traffic/traffic_data.hpp"
+#include "instance/traffic/traffic_data.hpp"
 
 #include <cmath>
 #include <omp.h>

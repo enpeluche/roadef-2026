@@ -3,7 +3,7 @@
  */
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include "traffic/traffic_data.hpp"
+#include "instance/traffic/traffic_data.hpp"
 
 TrafficData TrafficData::load(const std::string &dataset, const std::string &instance_id)
 {
